@@ -11,9 +11,9 @@ export default function PrizeTablePage() {
 
     /** 內部元件：渲染單一狀態的獎金表 */
     const renderTable = (isPromo: boolean, isTaxed: boolean, title: string, themeColor: string) => (
-        <div className="glass-card">
+        <div className="card">
             <h2 className="section-title" style={{ color: themeColor }}>{title}</h2>
-            <div style={{ overflowX: 'auto' }}>
+            <div className="table-container" style={{ overflowX: 'auto' }}>
                 <table className="data-table" style={{ minWidth: '400px' }}>
                     <thead>
                         <tr>
@@ -39,20 +39,20 @@ export default function PrizeTablePage() {
                                 return (
                                     <tr key={`${table.star}-${prize.hitCount}`}>
                                         {idx === 0 && (
-                                            <td rowSpan={validPrizes.length} style={{ fontWeight: 700, verticalAlign: 'top', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
+                                            <td rowSpan={validPrizes.length} style={{ fontWeight: 700, verticalAlign: 'top', borderRight: '1px solid var(--border-light)' }}>
                                                 {table.star} 星
                                             </td>
                                         )}
                                         <td>中 {prize.hitCount} 顆</td>
                                         <td>
-                                            <span style={{ color: gross > 0 ? '#f1f5f9' : '#64748b' }}>
+                                            <span style={{ color: gross > 0 ? 'var(--primary)' : 'var(--text-muted)', fontWeight: gross > 0 ? 700 : 400 }}>
                                                 ${gross.toLocaleString()}
                                             </span>
                                         </td>
                                         {isTaxed && (
                                             <td>
                                                 <span
-                                                    style={{ color: taxData.isTaxable ? '#f87171' : '#00ff87', fontWeight: 600 }}
+                                                    style={{ color: taxData.isTaxable ? 'var(--danger)' : 'var(--success)', fontWeight: 700 }}
                                                     title={taxData.isTaxable ? `扣稅額: $${taxData.totalTax.toLocaleString()}` : '免扣稅'}
                                                 >
                                                     ${taxData.netPrize.toLocaleString()}

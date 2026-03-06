@@ -104,12 +104,12 @@ export default function Calculator() {
             <h1 className="page-title"><span className="emoji-icon">🧮</span> 獎金計算器</h1>
 
             {/* 控制面板 */}
-            <div className="glass-card" style={{ marginBottom: 'var(--space-xl)' }}>
+            <div className="card" style={{ marginBottom: 'var(--space-xl)' }}>
                 <h2 className="section-title">⚙️ 參數設定</h2>
 
                 {/* 星數選擇器 */}
                 <div style={{ marginBottom: 'var(--space-lg)' }}>
-                    <label className="stat-label" style={{ marginBottom: 'var(--space-sm)', display: 'block' }}>
+                    <label className="form-label" style={{ marginBottom: 'var(--space-sm)', display: 'block' }}>
                         選擇星數（可複選）
                     </label>
                     <div className="star-selector">
@@ -127,10 +127,10 @@ export default function Calculator() {
 
                 {/* 參數列 */}
                 <div className="control-row">
-                    <div className="input-group">
-                        <label>投注倍數</label>
+                    <div className="form-group">
+                        <label className="form-label">投注倍數</label>
                         <select
-                            className="input-field"
+                            className="form-input"
                             value={multiplier}
                             onChange={(e) => setMultiplier(Number(e.target.value))}
                         >
@@ -140,11 +140,11 @@ export default function Calculator() {
                         </select>
                     </div>
 
-                    <div className="input-group">
-                        <label>投注組數</label>
+                    <div className="form-group">
+                        <label className="form-label">投注組數</label>
                         <input
                             type="number"
-                            className="input-field"
+                            className="form-input"
                             value={groupCount}
                             min={1}
                             max={100}
@@ -153,11 +153,11 @@ export default function Calculator() {
                         />
                     </div>
 
-                    <div className="input-group">
-                        <label>共用號碼數</label>
+                    <div className="form-group">
+                        <label className="form-label">共用號碼數</label>
                         <input
                             type="number"
-                            className="input-field"
+                            className="form-input"
                             value={sharedCount}
                             min={0}
                             max={selectedStars.length > 0 ? Math.max(...selectedStars) - 1 : 0}
@@ -188,7 +188,7 @@ export default function Calculator() {
 
             {/* 計算結果 */}
             {results.map((result) => (
-                <div key={result.star} className="glass-card" style={{ marginBottom: 'var(--space-lg)' }}>
+                <div key={result.star} className="card" style={{ marginBottom: 'var(--space-lg)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)' }}>
                         <h2 className="section-title" style={{ margin: 0 }}>
                             ⭐ {result.star} 星分析
@@ -210,7 +210,7 @@ export default function Calculator() {
 
                     <div className="grid grid-2">
                         {/* 機率表格 */}
-                        <div>
+                        <div className="table-container">
                             <table className="data-table">
                                 <thead>
                                     <tr>
@@ -265,10 +265,11 @@ export default function Calculator() {
                                     </Pie>
                                     <Tooltip
                                         contentStyle={{
-                                            background: 'rgba(17,24,39,0.95)',
-                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            background: 'var(--primary)',
+                                            border: 'none',
                                             borderRadius: 8,
-                                            color: '#f1f5f9',
+                                            color: 'var(--text-inverse)',
+                                            boxShadow: 'var(--shadow-md)'
                                         }}
                                         formatter={(value) => [`${value}%`, '機率']}
                                     />
@@ -283,7 +284,7 @@ export default function Calculator() {
             ))}
 
             {selectedStars.length === 0 && (
-                <div className="glass-card empty-state">
+                <div className="card empty-state">
                     <div className="icon">🎯</div>
                     <p>請選擇至少一個星數開始分析</p>
                 </div>

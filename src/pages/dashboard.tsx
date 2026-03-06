@@ -40,10 +40,10 @@ function calculateExpectedValue(star: number, isPromo: boolean, withTax: boolean
 /** 期望值色彩映射 */
 function getEvColor(ev: number): string {
     const ratio = ev / 25; // 相對於投注金額的比例
-    if (ratio >= 0.8) return '#00ff87';
-    if (ratio >= 0.6) return '#60a5fa';
-    if (ratio >= 0.4) return '#fbbf24';
-    return '#f87171';
+    if (ratio >= 0.8) return 'var(--success)';
+    if (ratio >= 0.6) return 'var(--info)';
+    if (ratio >= 0.4) return 'var(--warning)';
+    return 'var(--danger)';
 }
 
 export default function Dashboard() {
@@ -86,35 +86,35 @@ export default function Dashboard() {
             <h1 className="page-title"><span className="emoji-icon">📊</span> 研究室儀表板</h1>
 
             {/* 統計概覽 */}
-            <div className="grid grid-4" style={{ marginBottom: 'var(--space-xl)' }}>
-                <div className="glass-card stat-card">
-                    <span className="stat-label">最佳星數（常態）</span>
-                    <span className="stat-value">
+            <div className="kpi-grid">
+                <div className="kpi-card positive">
+                    <div className="kpi-label">最佳星數（常態）</div>
+                    <div className="kpi-value positive">
                         {evData.reduce((best, d) => d['常態(税前)'] > best['常態(税前)'] ? d : best).star}
-                    </span>
+                    </div>
                 </div>
-                <div className="glass-card stat-card">
-                    <span className="stat-label">最佳星數（加碼）</span>
-                    <span className="stat-value">
+                <div className="kpi-card positive">
+                    <div className="kpi-label">最佳星數（加碼）</div>
+                    <div className="kpi-value positive">
                         {evData.reduce((best, d) => d['加碼(税前)'] > best['加碼(税前)'] ? d : best).star}
-                    </span>
+                    </div>
                 </div>
-                <div className="glass-card stat-card">
-                    <span className="stat-label">最高返還率</span>
-                    <span className="stat-value">
+                <div className="kpi-card warning">
+                    <div className="kpi-label">最高返還率</div>
+                    <div className="kpi-value warning">
                         {Math.max(...evData.map((d) => d.promoReturnRate))}%
-                    </span>
+                    </div>
                 </div>
-                <div className="glass-card stat-card">
-                    <span className="stat-label">資料年份</span>
-                    <span className="stat-value">14年</span>
+                <div className="kpi-card">
+                    <div className="kpi-label">資料年份</div>
+                    <div className="kpi-value">14年</div>
                 </div>
             </div>
 
             {/* 期望值矩陣（熱力圖風格表格） */}
-            <div className="glass-card" style={{ marginBottom: 'var(--space-xl)' }}>
+            <div className="card" style={{ marginBottom: 'var(--space-xl)' }}>
                 <h2 className="section-title">🔥 期望值熱力圖（單注 $25）</h2>
-                <div style={{ overflowX: 'auto' }}>
+                <div className="table-container" style={{ overflowX: 'auto' }}>
                     <table className="data-table">
                         <thead>
                             <tr>
@@ -146,22 +146,22 @@ export default function Dashboard() {
                                         ${row['加碼(税後)'].toFixed(2)}
                                     </td>
                                     <td>
-                                        <span className={row.returnRate >= 60 ? 'chip chip-green' : 'chip chip-red'}>
+                                        <span className={row.returnRate >= 60 ? 'badge badge-success' : 'badge badge-danger'}>
                                             {row.returnRate}%
                                         </span>
                                     </td>
                                     <td>
-                                        <span className={row.returnRateTax >= 60 ? 'chip chip-green' : 'chip chip-red'}>
+                                        <span className={row.returnRateTax >= 60 ? 'badge badge-success' : 'badge badge-danger'}>
                                             {row.returnRateTax}%
                                         </span>
                                     </td>
                                     <td>
-                                        <span className={row.promoReturnRate >= 60 ? 'chip chip-green' : 'chip chip-red'}>
+                                        <span className={row.promoReturnRate >= 60 ? 'badge badge-success' : 'badge badge-danger'}>
                                             {row.promoReturnRate}%
                                         </span>
                                     </td>
                                     <td>
-                                        <span className={row.promoReturnRateTax >= 60 ? 'chip chip-green' : 'chip chip-red'}>
+                                        <span className={row.promoReturnRateTax >= 60 ? 'badge badge-success' : 'badge badge-danger'}>
                                             {row.promoReturnRateTax}%
                                         </span>
                                     </td>
@@ -173,30 +173,31 @@ export default function Dashboard() {
             </div>
 
             {/* 返還率長條圖 */}
-            <div className="glass-card">
+            <div className="card">
                 <h2 className="section-title">📈 返還率對照圖</h2>
                 <ResponsiveContainer width="100%" height={360}>
                     <BarChart data={returnRateData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                        <XAxis dataKey="name" stroke="#64748b" fontSize={12} />
-                        <YAxis stroke="#64748b" fontSize={12} unit="%" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
+                        <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={12} />
+                        <YAxis stroke="var(--text-muted)" fontSize={12} unit="%" />
                         <Tooltip
                             contentStyle={{
-                                background: 'rgba(17,24,39,0.95)',
-                                border: '1px solid rgba(255,255,255,0.1)',
+                                background: 'var(--primary)',
+                                border: 'none',
                                 borderRadius: 8,
-                                color: '#f1f5f9',
+                                color: 'var(--text-inverse)',
+                                boxShadow: 'var(--shadow-md)',
                             }}
                             formatter={(value) => [`${value}%`, '']}
                         />
-                        <Bar dataKey="常態" fill="#60a5fa" radius={[4, 4, 0, 0]}>
+                        <Bar dataKey="常態" fill="var(--info)" radius={[4, 4, 0, 0]}>
                             {returnRateData.map((entry, index) => (
-                                <Cell key={index} fill={entry.常態 >= 60 ? '#60a5fa' : '#475569'} />
+                                <Cell key={index} fill={entry.常態 >= 60 ? '#60A5FA' : '#94A3B8'} />
                             ))}
                         </Bar>
-                        <Bar dataKey="加碼" fill="#00ff87" radius={[4, 4, 0, 0]}>
+                        <Bar dataKey="加碼" fill="var(--success)" radius={[4, 4, 0, 0]}>
                             {returnRateData.map((entry, index) => (
-                                <Cell key={index} fill={entry.加碼 >= 60 ? '#00ff87' : '#22c55e40'} />
+                                <Cell key={index} fill={entry.加碼 >= 60 ? '#1E8449' : '#A7F3D0'} />
                             ))}
                         </Bar>
                     </BarChart>

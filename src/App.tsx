@@ -1,65 +1,75 @@
 /**
  * App 根元件
- * 包含 HashRouter 路由、導覽列與頁面佈局
+ * 金融後台版面配置 (左側 Sidebar + 頂部 Topbar + 右側主要內容)
+ * 支援手機版漢堡選單切換側邊欄
  */
-import { HashRouter, Routes, Route, NavLink } from 'react-router-dom';
+import { useState, useCallback } from 'react';
+import { HashRouter, Routes, Route } from 'react-router-dom';
+
+/* 共用版面元件 */
+import Sidebar from './components/Sidebar';
+import Topbar from './components/Topbar';
+
+/* 模組一：核心大盤 */
 import Dashboard from './pages/dashboard';
 import Calculator from './pages/calculator';
 import PrizeTablePage from './pages/prize-table-page';
+
+/* 模組二：量化實驗室 */
 import Backtest from './pages/backtest';
 import Simulation from './pages/simulation';
 
-/** 導覽列項目定義 */
-const NAV_ITEMS = [
-    { to: '/', label: '📊 儀表板' },
-    { to: '/calculator', label: '🧮 計算器' },
-    { to: '/prize-tables', label: '🏆 獎金表' },
-    { to: '/backtest', label: '📜 歷史回測' },
-    { to: '/simulation', label: '🎲 蒙地卡羅' },
-] as const;
+/* 模組三：Bingo 專業套件 */
+import BingoPrediction from './pages/bingo-prediction';
+import BingoStatistics from './pages/bingo-statistics';
+import BingoLatest from './pages/bingo-latest';
+import BingoRecords from './pages/bingo-records';
 
 export default function App() {
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    const toggleSidebar = useCallback(() => {
+        setSidebarOpen((prev) => !prev);
+    }, []);
+
+    const closeSidebar = useCallback(() => {
+        setSidebarOpen(false);
+    }, []);
+
     return (
         <HashRouter>
-            {/* 頂部導覽列 */}
-            <header className="nav-header">
-                <nav className="nav-inner">
-                    <a href="#/" className="nav-logo">
-                        <span className="nav-logo-icon">B</span>
-                        <span className="nav-logo-text">刮刮研究室</span>
-                    </a>
-                    <div className="nav-links">
-                        {NAV_ITEMS.map((item) => (
-                            <NavLink
-                                key={item.to}
-                                to={item.to}
-                                end={item.to === '/'}
-                                className={({ isActive }) =>
-                                    `nav-link${isActive ? ' active' : ''}`
-                                }
-                            >
-                                {item.label}
-                            </NavLink>
-                        ))}
-                    </div>
-                </nav>
-            </header>
+            <div className="app-layout">
+                {/* 左側欄導航 */}
+                <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
 
-            {/* 主要內容區 */}
-            <main className="main-content">
-                <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/calculator" element={<Calculator />} />
-                    <Route path="/prize-tables" element={<PrizeTablePage />} />
-                    <Route path="/backtest" element={<Backtest />} />
-                    <Route path="/simulation" element={<Simulation />} />
-                </Routes>
-            </main>
+                {/* 右側主區域 */}
+                <div className="main-wrapper">
+                    {/* 頂部狀態列 */}
+                    <Topbar onToggleSidebar={toggleSidebar} />
 
-            {/* 頁尾 */}
-            <footer className="app-footer">
-                刮刮研究室 © 2026 — 賓果賓果多星數機率分析模型
-            </footer>
+                    {/* 內容滾動區 */}
+                    <main className="main-content">
+                        <div className="content-container">
+                            <Routes>
+                                {/* 核心大盤 */}
+                                <Route path="/" element={<Dashboard />} />
+                                <Route path="/calculator" element={<Calculator />} />
+                                <Route path="/prize-tables" element={<PrizeTablePage />} />
+
+                                {/* 量化實驗室 */}
+                                <Route path="/backtest" element={<Backtest />} />
+                                <Route path="/simulation" element={<Simulation />} />
+
+                                {/* Bingo 專業套件 */}
+                                <Route path="/bingo-prediction" element={<BingoPrediction />} />
+                                <Route path="/bingo-statistics" element={<BingoStatistics />} />
+                                <Route path="/bingo-latest" element={<BingoLatest />} />
+                                <Route path="/bingo-records" element={<BingoRecords />} />
+                            </Routes>
+                        </div>
+                    </main>
+                </div>
+            </div>
         </HashRouter>
     );
 }

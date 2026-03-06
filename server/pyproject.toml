@@ -1,0 +1,11 @@
+[project]
+name = "bingo-scraper"
+version = "0.1.0"
+description = "台灣彩券賓果賓果開獎號碼爬蟲後端"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "httpx>=0.28.0",
+    "apscheduler>=3.11.0",
+]

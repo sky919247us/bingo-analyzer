@@ -1,33 +1,65 @@
 /**
  * 歷史回測頁面
- * 載入 CSV 歷史數據，模擬策略回測
+ * 自動支援 public/data/ 內的 CSV 歷史開獎資料
+ * 使用者可自選年份啟動回測
  */
 import { useState, useMemo, useCallback } from 'react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, BarChart, Bar, Cell
 } from 'recharts';
-import { loadCsvFile, backtestStrategy, type DrawResult } from '../utils/csv-parser';
+import { parseCsvData, backtestStrategy, type DrawResult } from '../utils/csv-parser';
 import { getPrize } from '../models/prize-table';
+
+/** 可用的年份清單 */
+const AVAILABLE_YEARS = [
+    2026, 2025, 2024, 2023, 2022, 2021, 2020,
+    2019, 2018, 2017, 2016, 2015, 2014, 2013,
+];
+
+const PIE_COLORS = ['#00ff87', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171', '#22d3ee', '#818cf8', '#fb923c', '#34d399', '#f472b6', '#94a3b8'];
 
 export default function Backtest() {
     const [data, setData] = useState<DrawResult[]>([]);
     const [fileName, setFileName] = useState('');
     const [loading, setLoading] = useState(false);
+    const [selectedYear, setSelectedYear] = useState<number | null>(null);
     const [star, setStar] = useState(3);
     const [isPromo, setIsPromo] = useState(true);
     const [multiplier, setMultiplier] = useState(4);
     const [simCount, setSimCount] = useState(10);
 
-    // 載入 CSV 檔案
+    /** 從 public/data/ 載入指定年份的 CSV */
+    const handleLoadYear = useCallback(async (year: number) => {
+        setLoading(true);
+        setSelectedYear(year);
+        setFileName(`賓果賓果_${year}.csv`);
+        try {
+            const url = `${import.meta.env.BASE_URL}data/賓果賓果_${year}.csv`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`載入失敗 (HTTP ${response.status})`);
+            const csvText = await response.text();
+            const parsed = parseCsvData(csvText);
+            setData(parsed);
+        } catch (err) {
+            console.error('CSV 載入失敗:', err);
+            setData([]);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    /** 手動上傳 CSV（保留此功能作為備用） */
     const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         setLoading(true);
         setFileName(file.name);
+        setSelectedYear(null);
         try {
-            const parsed = await loadCsvFile(file);
+            const text = await file.text();
+            const parsed = parseCsvData(text);
             setData(parsed);
         } catch (err) {
             console.error('CSV 解析失敗:', err);
@@ -40,14 +72,11 @@ export default function Backtest() {
     const backtestResult = useMemo(() => {
         if (data.length === 0) return null;
 
-        // 隨機選號模擬（多次取平均）
         const betCostPerPeriod = 25 * multiplier;
-        const totalPeriods = Math.min(data.length, 2000); // 限制期數避免計算過久
+        const totalPeriods = Math.min(data.length, 2000);
         const slicedData = data.slice(0, totalPeriods);
 
-        // 進行多次隨機選號並計算平均
         const simulations = Array.from({ length: simCount }, () => {
-            // 隨機選擇號碼
             const allNums = Array.from({ length: 80 }, (_, i) => i + 1);
             for (let i = allNums.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -55,7 +84,6 @@ export default function Backtest() {
             }
             const selectedNumbers = allNums.slice(0, star);
 
-            // 回測
             const results = backtestStrategy(slicedData, selectedNumbers);
 
             let cumProfit = 0;
@@ -102,16 +130,13 @@ export default function Backtest() {
             };
         });
 
-        // 計算平均值
         const avgProfit = simulations.reduce((s, sim) => s + sim.totalProfit, 0) / simCount;
         const avgWinRate = simulations.reduce((s, sim) => s + sim.winRate, 0) / simCount;
         const avgMaxMiss = Math.round(simulations.reduce((s, sim) => s + sim.maxConsecutiveMiss, 0) / simCount);
 
-        // 取中位數模擬的資金曲線作為展示
         const sorted = [...simulations].sort((a, b) => a.totalProfit - b.totalProfit);
         const medianCurve = sorted[Math.floor(sorted.length / 2)].profitCurve;
 
-        // 命中次數分布
         const hitDistribution: { [key: number]: number } = {};
         for (let i = 0; i <= star; i++) hitDistribution[i] = 0;
 
@@ -147,12 +172,31 @@ export default function Backtest() {
         <div className="animate-in">
             <h1 className="page-title"><span className="emoji-icon">📜</span> 歷史回測</h1>
 
-            {/* 控制面板 */}
-            <div className="glass-card" style={{ marginBottom: 'var(--space-xl)' }}>
-                <h2 className="section-title">⚙️ 回測設定</h2>
-                <div className="control-row">
-                    <div className="input-group">
-                        <label>載入 CSV 檔案</label>
+            {/* 年份選擇 */}
+            <div className="glass-card" style={{ marginBottom: 'var(--space-lg)' }}>
+                <h2 className="section-title">📅 選擇年份資料</h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: 12 }}>
+                    點擊下方年份按鈕即可自動載入對應年度的台彩賓果賓果歷史開獎數據
+                </p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+                    {AVAILABLE_YEARS.map((year) => (
+                        <button
+                            key={year}
+                            className={`strategy-btn${selectedYear === year ? ' selected' : ''}`}
+                            onClick={() => handleLoadYear(year)}
+                            disabled={loading}
+                        >
+                            {year}
+                        </button>
+                    ))}
+                </div>
+
+                {/* 手動上傳作為備用 */}
+                <details style={{ marginTop: 8 }}>
+                    <summary style={{ color: 'var(--text-muted)', fontSize: '0.8rem', cursor: 'pointer' }}>
+                        📂 或手動上傳其他 CSV 檔案
+                    </summary>
+                    <div style={{ marginTop: 8 }}>
                         <input
                             type="file"
                             accept=".csv"
@@ -161,7 +205,13 @@ export default function Backtest() {
                             style={{ padding: '6px' }}
                         />
                     </div>
+                </details>
+            </div>
 
+            {/* 回測設定 */}
+            <div className="glass-card" style={{ marginBottom: 'var(--space-lg)' }}>
+                <h2 className="section-title">⚙️ 回測設定</h2>
+                <div className="control-row">
                     <div className="input-group">
                         <label>星數</label>
                         <select className="input-field" value={star} onChange={(e) => setStar(Number(e.target.value))}>
@@ -259,7 +309,6 @@ export default function Backtest() {
                                     strokeWidth={2}
                                     dot={false}
                                 />
-                                {/* 零線 */}
                                 <Line
                                     type="monotone"
                                     data={backtestResult.medianCurve.map((d) => ({ ...d, zero: 0 }))}
@@ -307,14 +356,12 @@ export default function Backtest() {
             {data.length === 0 && !loading && (
                 <div className="glass-card empty-state">
                     <div className="icon">📂</div>
-                    <p>請上傳 CSV 歷史開獎數據檔案開始回測</p>
+                    <p>請點選上方年份按鈕載入歷史開獎數據</p>
                     <p style={{ fontSize: '0.8rem', marginTop: 'var(--space-sm)' }}>
-                        支援格式：台灣彩券賓果賓果開獎數據 CSV
+                        支援 2013 ~ 2026 年台灣彩券賓果賓果開獎數據
                     </p>
                 </div>
             )}
         </div>
     );
 }
-
-const PIE_COLORS = ['#00ff87', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171', '#22d3ee', '#818cf8', '#fb923c', '#34d399', '#f472b6', '#94a3b8'];
