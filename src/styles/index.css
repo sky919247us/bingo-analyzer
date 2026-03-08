@@ -100,10 +100,10 @@ body {
  * 全域版面配置 (Layout)
  * ============================================ */
 
-/* 應用程式外框設定為 100vh 且不允許 body 捲動，由內部對應區塊捲動 */
+/* 應用程式外框設定為 100dvh 解決行動版瀏覽器 100vh 遮擋問題，由內部區塊捲動 */
 .app-layout {
   display: flex;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: var(--bg-page);
 }
@@ -892,7 +892,8 @@ select.form-input {
 
   /* -- 主內容區 -- */
   .main-content {
-    padding: var(--space-md);
+    /* 增加底部邊距避免 iOS Safari 下方工具列遮擋 */
+    padding: var(--space-md) var(--space-md) calc(var(--space-2xl) + env(safe-area-inset-bottom, 24px));
   }
 
   /* -- 頁面標題 -- */
