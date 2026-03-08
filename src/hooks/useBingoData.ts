@@ -16,11 +16,15 @@ const AVAILABLE_YEARS = [
 /** 後端 API 基底 URL */
 const API_BASE = 'http://localhost:8888';
 
-/** 即時模式刷新間隔（毫秒）— 每 60 秒向後端取一次最新期 */
+/** 台彩公開 API 端點（前端直連用） */
+const TLC_LATEST_URL = 'https://api.taiwanlottery.com/TLCAPIWeB/Lottery/LatestBingoResult';
+const TLC_HISTORY_URL = 'https://api.taiwanlottery.com/TLCAPIWeB/Lottery/BingoResult';
+
+/** 即時模式刷新間隔（毫秒）— 每 60 秒取一次最新期 */
 const LIVE_REFRESH_INTERVAL = 60_000;
 
-/** CSV 模式刷新間隔 */
-const CSV_REFRESH_INTERVAL = 300_000;
+/** CSV 模式刷新間隔（毫秒）— 同樣 60 秒 */
+const CSV_REFRESH_INTERVAL = 60_000;
 
 interface UseBingoDataReturn {
     draws: BingoDrawData[];
@@ -51,21 +55,28 @@ interface UseBingoDataReturn {
 }
 
 /**
- * 從後端 API 取得最新開獎
+ * 直接從台彩公開 API 取得最新開獎（不需後端代理）
  */
-async function fetchLiveLatest(): Promise<BingoDrawData | null> {
+async function fetchFromTlcApi(): Promise<BingoDrawData | null> {
     try {
-        const resp = await fetch(`${API_BASE}/api/latest`);
+        const resp = await fetch(TLC_LATEST_URL, {
+            headers: {
+                'Accept': 'application/json',
+            },
+        });
         if (!resp.ok) return null;
-        const json = await resp.json();
-        if (!json.success || !json.data) return null;
+        const data = await resp.json();
 
-        const d = json.data;
+        if (data.rtCode !== 0) return null;
+
+        const post = data.content?.lotteryBingoLatestPost;
+        if (!post) return null;
+
         return {
-            period: String(d.drawTerm),
-            drawTime: d.dDate,
-            numbers: d.bigShowOrder.map((n: string) => parseInt(n, 10)),
-            superNumber: parseInt(d.superNumber, 10),
+            period: String(post.drawTerm),
+            drawTime: post.dDate,
+            numbers: post.bigShowOrder.map((n: string) => parseInt(n, 10)),
+            superNumber: parseInt(post.prizeNum?.bullEye || '0', 10),
         };
     } catch {
         return null;
@@ -73,25 +84,101 @@ async function fetchLiveLatest(): Promise<BingoDrawData | null> {
 }
 
 /**
- * 從後端 API 取得今日歷史
+ * 從後端 API 取得最新開獎，失敗時 fallback 到台彩 API 直連
+ */
+async function fetchLiveLatest(): Promise<BingoDrawData | null> {
+    // 先嘗試本地後端
+    try {
+        const resp = await fetch(`${API_BASE}/api/latest`);
+        if (resp.ok) {
+            const json = await resp.json();
+            if (json.success && json.data) {
+                const d = json.data;
+                return {
+                    period: String(d.drawTerm),
+                    drawTime: d.dDate,
+                    numbers: d.bigShowOrder.map((n: string) => parseInt(n, 10)),
+                    superNumber: parseInt(d.superNumber, 10),
+                };
+            }
+        }
+    } catch {
+        // 後端不可用，繼續嘗試台彩 API
+    }
+
+    // Fallback：直接呼叫台彩 API
+    return fetchFromTlcApi();
+}
+
+/**
+ * 從後端 API 取得今日歷史，失敗時 fallback 到台彩歷史 API 直連
  */
 async function fetchLiveHistory(): Promise<BingoDrawData[]> {
+    // 先嘗試本地後端
     try {
         const today = new Date().toISOString().slice(0, 10);
         const resp = await fetch(`${API_BASE}/api/history?date=${today}&page=1&size=50`);
-        if (!resp.ok) return [];
-        const json = await resp.json();
-        if (!json.success || !json.data?.draws) return [];
-
-        return json.data.draws.map((d: Record<string, unknown>) => ({
-            period: String(d.drawTerm),
-            drawTime: (d.dDate as string) || today,
-            numbers: (d.bigShowOrder as string[]).map((n: string) => parseInt(n, 10)),
-            superNumber: parseInt(d.superNumber as string, 10),
-        }));
+        if (resp.ok) {
+            const json = await resp.json();
+            if (json.success && json.data?.draws && json.data.draws.length > 0) {
+                return json.data.draws.map((d: Record<string, unknown>) => ({
+                    period: String(d.drawTerm),
+                    drawTime: (d.dDate as string) || today,
+                    numbers: (d.bigShowOrder as string[]).map((n: string) => parseInt(n, 10)),
+                    superNumber: parseInt(d.superNumber as string, 10),
+                }));
+            }
+        }
     } catch {
-        return [];
+        // 後端不可用
     }
+
+    // Fallback：直接呼叫台彩歷史 API
+    return fetchHistoryFromTlcApi();
+}
+
+/**
+ * 直接從台彩歷史 API 取得當天開獎資料（支援翻頁）
+ */
+async function fetchHistoryFromTlcApi(): Promise<BingoDrawData[]> {
+    const allDraws: BingoDrawData[] = [];
+    const today = new Date().toISOString().slice(0, 10);
+    let page = 1;
+    const pageSize = 50;
+
+    try {
+        // 最多取 5 頁（250 期），避免無限迴圈
+        while (page <= 5) {
+            const url = `${TLC_HISTORY_URL}?openDate=${today}&pageNum=${page}&pageSize=${pageSize}`;
+            const resp = await fetch(url, {
+                headers: { 'Accept': 'application/json' },
+            });
+            if (!resp.ok) break;
+
+            const data = await resp.json();
+            if (data.rtCode !== 0) break;
+
+            const results = data.content?.bingoQueryResult;
+            if (!results || results.length === 0) break;
+
+            for (const item of results) {
+                allDraws.push({
+                    period: String(item.drawTerm),
+                    drawTime: item.dDate || today,
+                    numbers: item.bigShowOrder.map((n: string) => parseInt(n, 10)),
+                    superNumber: parseInt(item.bullEyeTop || '0', 10),
+                });
+            }
+
+            const totalSize = data.content?.totalSize || 0;
+            if (allDraws.length >= totalSize) break;
+            page++;
+        }
+    } catch {
+        // 台彩 API 也不可用
+    }
+
+    return allDraws;
 }
 
 /**
@@ -147,7 +234,7 @@ export function useBingoData(): UseBingoDataReturn {
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    /** 即時模式：從後端 API 取得資料 */
+    /** 即時模式：從後端 API 或台彩 API 取得資料 */
     const loadLive = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -158,14 +245,15 @@ export function useBingoData(): UseBingoDataReturn {
                 fetchLiveHistory(),
             ]);
 
+            // 只要最新期取得成功就維持即時模式
             if (!latest && history.length === 0) {
-                // 後端不可用，自動降級到 CSV
+                // 所有來源都不可用，自動降級到 CSV
                 setMode('csv');
-                setError('後端 API 不可用，已切換至 CSV 模式');
+                setError('API 不可用，已切換至 CSV 模式');
                 return;
             }
 
-            // 合併：最新期 + 歷史（去重）
+            // 合併：最新期 + 歷史（去重），按期數降序排列
             const allDraws: BingoDrawData[] = [];
             if (latest) allDraws.push(latest);
             for (const d of history) {
@@ -173,6 +261,9 @@ export function useBingoData(): UseBingoDataReturn {
                     allDraws.push(d);
                 }
             }
+
+            // 按期數降序排列，確保最新在前
+            allDraws.sort((a, b) => Number(b.period) - Number(a.period));
 
             setDraws(allDraws);
             setRawDraws([]); // 即時模式下不使用 rawDraws
@@ -191,8 +282,11 @@ export function useBingoData(): UseBingoDataReturn {
         setError(null);
         try {
             const csvData = await fetchCsvYear(selectedYear);
-            setRawDraws(csvData);
-            setDraws(csvData.map(toBingoDrawData));
+            // 反序排列，確保最新期在前
+            const reversedCsvData = [...csvData].reverse();
+            const reversedDraws = reversedCsvData.map(toBingoDrawData);
+            setRawDraws(reversedCsvData);
+            setDraws(reversedDraws);
             setCountdown(CSV_REFRESH_INTERVAL / 1000);
         } catch (err) {
             setError(err instanceof Error ? err.message : '載入失敗');

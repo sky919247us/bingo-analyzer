@@ -53,9 +53,12 @@ export interface CheckResult {
     allDrawn: boolean;
 }
 
+/** 台彩歷史 API 端點（前端直連 fallback 用） */
+const TLC_HISTORY_URL = 'https://api.taiwanlottery.com/TLCAPIWeB/Lottery/BingoResult';
+
 /**
  * 從後端 API 取得指定日期的所有開獎資料
- * 最多取得 50 期 × 多頁
+ * 若後端不可用，則 Fallback 至台彩公開歷史 API
  */
 async function fetchDrawsByDate(date: string): Promise<Array<{
     period: string;
@@ -63,14 +66,16 @@ async function fetchDrawsByDate(date: string): Promise<Array<{
     superNumber: number;
     drawTime: string;
 }>> {
+    let results: Array<{ period: string; numbers: number[]; superNumber: number; drawTime: string }> = [];
+    let backendSuccess = false;
+
     try {
-        const results: Array<{ period: string; numbers: number[]; superNumber: number; drawTime: string }> = [];
-        // 取前 3 頁（150 期），涵蓋一天全部的開獎
-        for (let page = 1; page <= 3; page++) {
+        // 取前 4 頁（200 期），涵蓋一天全部的開獎（本地 API）
+        for (let page = 1; page <= 4; page++) {
             const resp = await fetch(`${API_BASE}/api/history?date=${date}&page=${page}&size=50`);
-            if (!resp.ok) break;
+            if (!resp.ok) throw new Error('Backend failed');
             const json = await resp.json();
-            if (!json.success || !json.data?.draws) break;
+            if (!json.success || !json.data?.draws) throw new Error('Invalid data');
 
             const draws = json.data.draws as Array<Record<string, unknown>>;
             if (draws.length === 0) break;
@@ -84,13 +89,53 @@ async function fetchDrawsByDate(date: string): Promise<Array<{
                 });
             }
 
+            backendSuccess = true;
             // 如果這一頁不滿 50 筆，代表沒有下一頁
             if (draws.length < 50) break;
         }
-        return results;
     } catch {
-        return [];
+        // 後端失敗，將進行 fallback
     }
+
+    if (backendSuccess && results.length > 0) {
+        return results;
+    }
+
+    // Fallback：直接呼叫台彩歷史 API
+    results = [];
+    try {
+        let page = 1;
+        const pageSize = 50;
+
+        while (page <= 5) {
+            const url = `${TLC_HISTORY_URL}?openDate=${date}&pageNum=${page}&pageSize=${pageSize}`;
+            const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            if (!resp.ok) break;
+
+            const data = await resp.json();
+            if (data.rtCode !== 0) break;
+
+            const contentResults = data.content?.bingoQueryResult;
+            if (!contentResults || contentResults.length === 0) break;
+
+            for (const item of contentResults) {
+                results.push({
+                    period: String(item.drawTerm),
+                    numbers: item.bigShowOrder.map((n: string) => parseInt(n, 10)),
+                    superNumber: parseInt(item.bullEyeTop || '0', 10),
+                    drawTime: item.dDate || date, // 若無時間，先預設為該日期
+                });
+            }
+
+            const totalSize = data.content?.totalSize || 0;
+            if (results.length >= totalSize) break;
+            page++;
+        }
+    } catch (err) {
+        console.error('TLC History Fallback Failed:', err);
+    }
+
+    return results;
 }
 
 /**
