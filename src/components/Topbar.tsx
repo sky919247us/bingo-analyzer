@@ -47,7 +47,7 @@ export default function Topbar({ onToggleSidebar }: TopbarProps) {
                 </div>
             </div>
 
-            {/* 右側區塊：公告 + 時間 + 設定 */}
+            {/* 右側區塊：公告 + 時間 */}
             <div className="topbar-right">
                 <div className="topbar-announcement">
                     🔔 <span className="ticker-text">台彩 BINGO BINGO 連線正常，資料即時同步中</span>
@@ -56,10 +56,6 @@ export default function Topbar({ onToggleSidebar }: TopbarProps) {
                 <div className="topbar-time">
                     {currentTime}
                 </div>
-
-                <button className="btn btn-secondary topbar-settings-btn">
-                    ⚙️ <span className="settings-label">設定</span>
-                </button>
             </div>
         </header>
     );

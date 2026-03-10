@@ -100,10 +100,10 @@ body {
  * 全域版面配置 (Layout)
  * ============================================ */
 
-/* 應用程式外框設定為 100vh 且不允許 body 捲動，由內部對應區塊捲動 */
+/* 應用程式外框設定為 100dvh 解決行動版瀏覽器 100vh 遮擋問題，由內部區塊捲動 */
 .app-layout {
   display: flex;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: var(--bg-page);
 }
@@ -762,24 +762,365 @@ select.form-input {
   border-bottom: 3px solid var(--warning);
 }
 
-/* RWD: 手機版調整 */
+/* ============================================
+ * 漢堡選單按鈕（預設隱藏，手機版顯示）
+ * ============================================ */
+.hamburger-btn {
+  display: none;
+  /* PC 版隱藏 */
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 36px;
+  height: 36px;
+  padding: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.hamburger-btn:hover {
+  background: var(--bg-page);
+}
+
+.hamburger-btn span {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: var(--primary);
+  border-radius: 2px;
+  transition: all var(--transition-base);
+}
+
+/* ============================================
+ * Sidebar Overlay（手機版遮罩層）
+ * ============================================ */
+.sidebar-overlay {
+  display: none;
+  /* 預設隱藏，由手機版 media query 控制 */
+}
+
+/* ============================================
+ * RWD: 手機版調整（≤992px）
+ * ============================================ */
 @media (max-width: 992px) {
+
+  /* -- 漢堡按鈕 -- */
+  .hamburger-btn {
+    display: flex;
+  }
+
+  /* -- Sidebar：改為 Drawer 側滑 -- */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 280px;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: none;
+  }
+
+  .sidebar.sidebar-open {
+    transform: translateX(0);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* -- 遮罩層 -- */
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    animation: fadeIn 0.2s ease-out forwards;
+  }
+
+  /* -- 版面配置 -- */
   .app-layout {
     flex-direction: column;
   }
 
-  .sidebar {
-    display: none;
-    /* 手機版隱藏側邊欄，需額外實作 Drawer */
+  /* -- Topbar 響應式 -- */
+  .topbar {
+    padding: 0 var(--space-md);
+    gap: var(--space-sm);
   }
 
+  .topbar-search {
+    width: auto;
+    flex: 1;
+    min-width: 0;
+    max-width: 200px;
+  }
+
+  .topbar-search input {
+    font-size: 0.8rem;
+  }
+
+  /* 手機版隱藏公告跑馬燈與設定按鈕文字 */
+  .topbar-announcement {
+    display: none;
+  }
+
+  .topbar-time {
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  .settings-label {
+    display: none;
+  }
+
+  .topbar-right {
+    gap: var(--space-sm);
+    flex-shrink: 0;
+  }
+
+  .topbar-settings-btn {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
+  /* -- 主內容區 -- */
+  .main-content {
+    /* 增加底部邊距避免 iOS Safari 下方工具列遮擋 */
+    padding: var(--space-md) var(--space-md) calc(var(--space-2xl) + env(safe-area-inset-bottom, 24px));
+  }
+
+  /* -- 頁面標題 -- */
+  .page-title {
+    font-size: 1.3rem;
+  }
+
+  .section-title {
+    font-size: 1rem;
+  }
+
+  /* -- KPI 網格 -- */
   .kpi-grid {
     grid-template-columns: 1fr;
   }
 
+  .kpi-value {
+    font-size: 2rem;
+  }
+
+  /* -- 號碼選擇面板 -- */
   .number-pad {
     grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    padding: var(--space-md);
   }
+
+  /* -- Bingo 號碼球 -- */
+  .bingo-ball {
+    width: 36px;
+    height: 36px;
+    font-size: 0.85rem;
+  }
+
+  .bingo-ball.super {
+    transform: scale(1.05);
+  }
+
+  /* -- 星號按鈕 -- */
+  .star-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 0.95rem;
+  }
+
+  /* -- 策略按鈕 -- */
+  .strategy-btn {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+
+  /* -- 卡片 -- */
+  .card {
+    padding: var(--space-md);
+  }
+
+  /* -- 表格強制水平捲動 -- */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table {
+    font-size: 0.8rem;
+    min-width: 600px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 8px var(--space-sm);
+  }
+
+  /* -- 控制面板網格 (手機版 2 欄) -- */
+  .control-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-sm);
+  }
+
+  /* -- 網格系統 (手機版堆疊) -- */
+  .grid-3,
+  .grid-4 {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    padding: var(--space-md);
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+}
+
+/* ============================================
+ * RWD: 極小螢幕（≤480px）
+ * ============================================ */
+@media (max-width: 480px) {
+  .topbar-search {
+    display: none;
+  }
+
+  .topbar-time {
+    display: none;
+  }
+
+  .page-title {
+    font-size: 1.1rem;
+  }
+
+  .bingo-ball {
+    width: 30px;
+    height: 30px;
+    font-size: 0.75rem;
+  }
+
+  .number-pad {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    padding: var(--space-sm);
+  }
+
+  .number-btn {
+    font-size: 1rem;
+  }
+
+  .star-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 0.85rem;
+  }
+
+  /* -- 控制面板網格 (極小螢幕 1 欄) -- */
+  .control-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================
+ * 控制面板網格佈局 (Simulation / Backtest / Calculator)
+ * ============================================ */
+.control-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  align-items: end;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.input-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.input-group .input-field,
+.input-group select,
+.input-group input {
+  width: 100% !important;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  transition: border-color var(--transition-fast);
+}
+
+.input-group .input-field:focus,
+.input-group select:focus,
+.input-group input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* ============================================
+ * 統計卡片與網格佈局 (Grid System)
+ * ============================================ */
+.grid {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-md) var(--space-lg);
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+}
+
+.stat-value.danger {
+  color: var(--danger);
 }
 
 /* 取代舊有的玻璃擬態 (相容舊程式碼) */
@@ -791,10 +1132,7 @@ select.form-input {
   box-shadow: var(--shadow-sm);
 }
 
-/* 確保統計儀表板的顏色能正常顯示 */
-.stat-value {
-  color: var(--primary);
-}
+/* NOTE: stat-value 已在上方 Grid System 區塊統一定義 */
 
 .chip-red {
   background: rgba(211, 47, 47, 0.1);

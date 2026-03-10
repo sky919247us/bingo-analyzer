@@ -195,7 +195,6 @@ export default function Simulation() {
                             className="input-field"
                             value={initialCapital}
                             onChange={(e) => setInitialCapital(Number(e.target.value))}
-                            style={{ width: 120 }}
                         />
                     </div>
 
@@ -208,7 +207,6 @@ export default function Simulation() {
                             min={10}
                             max={10000}
                             onChange={(e) => setPeriods(Number(e.target.value))}
-                            style={{ width: 100 }}
                         />
                     </div>
 
@@ -219,7 +217,6 @@ export default function Simulation() {
                             className="input-field"
                             value={stopLoss}
                             onChange={(e) => setStopLoss(Number(e.target.value))}
-                            style={{ width: 100 }}
                         />
                     </div>
 
@@ -230,7 +227,6 @@ export default function Simulation() {
                             className="input-field"
                             value={stopWin}
                             onChange={(e) => setStopWin(Number(e.target.value))}
-                            style={{ width: 100 }}
                         />
                     </div>
 
@@ -243,7 +239,6 @@ export default function Simulation() {
                             min={10}
                             max={1000}
                             onChange={(e) => setSimCount(Math.max(10, Number(e.target.value)))}
-                            style={{ width: 80 }}
                         />
                     </div>
 

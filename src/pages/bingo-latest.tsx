@@ -7,16 +7,47 @@ import { useBingoData } from '../hooks/useBingoData';
 export default function BingoLatest() {
     const { latestDraw, latestStats, loading, countdown, draws, error } = useBingoData();
 
-    /** 格式化開獎時間 */
+    /** 格式化 Date 物件為顯示用字串 */
+    const formatDate = (dt: Date) =>
+        `${dt.getFullYear()}/${(dt.getMonth() + 1).toString().padStart(2, '0')}/${dt.getDate().toString().padStart(2, '0')} ${dt.getHours().toString().padStart(2, '0')}:${dt.getMinutes().toString().padStart(2, '0')}`;
+
+    /** 格式化開獎時間（原始字串版） */
     const formatDrawTime = (drawTime: string) => {
         if (!drawTime || drawTime === '0001-01-01T00:00:00') return '—';
         try {
             const dt = new Date(drawTime);
             if (isNaN(dt.getTime())) return drawTime;
-            return `${dt.getFullYear()}/${(dt.getMonth() + 1).toString().padStart(2, '0')}/${dt.getDate().toString().padStart(2, '0')} ${dt.getHours().toString().padStart(2, '0')}:${dt.getMinutes().toString().padStart(2, '0')}`;
+            return formatDate(dt);
         } catch {
             return drawTime;
         }
+    };
+
+    /**
+     * 取得指定 draw 的開獎時間
+     * 台彩歷史 API 不回傳個別期次的時間，故以最新期的已知時間為基準，
+     * 根據期數差 × 5 分鐘反推計算
+     */
+    const getDrawTime = (draw: typeof draws[0]) => {
+        // 如果 draw 本身有有效時間，直接用
+        if (draw.drawTime && draw.drawTime !== '0001-01-01T00:00:00') {
+            const dt = new Date(draw.drawTime);
+            if (!isNaN(dt.getTime()) && dt.getFullYear() > 2000) {
+                return formatDate(dt);
+            }
+        }
+
+        // 以最新期為基準反推（賓果賓果每 5 分鐘一期）
+        if (latestDraw?.drawTime && latestDraw.period) {
+            const latestDate = new Date(latestDraw.drawTime);
+            if (!isNaN(latestDate.getTime()) && latestDate.getFullYear() > 2000) {
+                const periodDiff = Number(latestDraw.period) - Number(draw.period);
+                const drawDate = new Date(latestDate.getTime() - periodDiff * 5 * 60_000);
+                return formatDate(drawDate);
+            }
+        }
+
+        return '—';
     };
 
     return (
@@ -124,9 +155,9 @@ export default function BingoLatest() {
                         </div>
                     )}
 
-                    {/* 近 10 期列表 */}
+                    {/* 近 20 期列表 */}
                     <div className="card">
-                        <h3 className="section-title">📋 近期開獎紀錄</h3>
+                        <h3 className="section-title">📋 近期開獎紀錄（最新 20 期）</h3>
                         <div className="table-container" style={{ overflowX: 'auto' }}>
                             <table className="data-table">
                                 <thead>
@@ -138,13 +169,13 @@ export default function BingoLatest() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {draws.slice(0, 10).map((draw) => (
+                                    {draws.slice(0, 20).map((draw) => (
                                         <tr key={draw.period}>
                                             <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
                                                 {draw.period}
                                             </td>
                                             <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                                {formatDrawTime(draw.drawTime)}
+                                                {getDrawTime(draw)}
                                             </td>
                                             <td>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
