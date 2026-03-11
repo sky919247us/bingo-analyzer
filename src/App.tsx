@@ -24,6 +24,8 @@ import BingoPrediction from './pages/bingo-prediction';
 import BingoStatistics from './pages/bingo-statistics';
 import BingoLatest from './pages/bingo-latest';
 import BingoRecords from './pages/bingo-records';
+import BingoDistribution from './pages/bingo-distribution';
+import DashboardLarge from './pages/dashboard-large';
 
 export default function App() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -65,6 +67,8 @@ export default function App() {
                                 <Route path="/bingo-statistics" element={<BingoStatistics />} />
                                 <Route path="/bingo-latest" element={<BingoLatest />} />
                                 <Route path="/bingo-records" element={<BingoRecords />} />
+                                <Route path="/bingo-distribution" element={<BingoDistribution />} />
+                                <Route path="/dashboard-large" element={<DashboardLarge />} />
                             </Routes>
                         </div>
                     </main>

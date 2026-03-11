@@ -1,3 +1,4 @@
+import { useSeo } from '../hooks/useSeo';
 /**
  * 獎金計算器頁面
  * 支援星數選擇、機率計算、獎金計算、組合策略模擬
@@ -14,6 +15,7 @@ import { getShareUrl, type StrategyParams } from '../utils/url-params';
 const PIE_COLORS = ['#00ff87', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171', '#22d3ee', '#818cf8', '#fb923c', '#34d399', '#f472b6'];
 
 export default function Calculator() {
+    useSeo({ title: '中獎計算器', description: '各種星數、倍數與玩法的獎金精算與投資報酬評估工具。', keywords: '賓果中獎計算, 獎金試算' });
     const [selectedStars, setSelectedStars] = useState<number[]>([3]);
     const [multiplier, setMultiplier] = useState(1);
     const [isPromo, setIsPromo] = useState(false);

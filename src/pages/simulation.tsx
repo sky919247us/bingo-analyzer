@@ -1,3 +1,4 @@
+import { useSeo } from '../hooks/useSeo';
 /**
  * 蒙地卡羅模擬頁面
  * 資金模擬、破產機率計算、資金水位圖
@@ -19,6 +20,7 @@ interface SimulationRun {
 }
 
 export default function Simulation() {
+    useSeo({ title: '蒙地卡羅模擬', description: '利用蒙地卡羅隨機演算法，預演長時間投注下各種資金池與風險管控測試。', keywords: '蒙地卡羅, 資金管控' });
     const [star, setStar] = useState(3);
     const [multiplier, setMultiplier] = useState(4);
     const [isPromo, setIsPromo] = useState(true);

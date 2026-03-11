@@ -42,8 +42,8 @@ export default function Topbar({ onToggleSidebar }: TopbarProps) {
                 </button>
 
                 <div className="topbar-search">
-                    <span style={{ color: 'var(--text-muted)' }}>🔍</span>
-                    <input type="text" placeholder="搜尋彩券名稱或功能..." />
+                    <span style={{ color: 'var(--text-muted)' }} aria-hidden="true">🔍</span>
+                    <input type="text" placeholder="搜尋彩券名稱或功能..." aria-label="全站搜尋" />
                 </div>
             </div>
 

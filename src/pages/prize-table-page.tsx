@@ -1,3 +1,4 @@
+import { useSeo } from '../hooks/useSeo';
 /**
  * 完整獎金表分頁
  * 顯示常態/加碼與稅前/稅後的四種獎金結構
@@ -6,6 +7,7 @@ import { PRIZE_TABLES } from '../models/prize-table';
 import { calculateTax } from '../models/tax';
 
 export default function PrizeTablePage() {
+    useSeo({ title: '各星玩法獎金表', description: '台灣彩券賓果賓果1星至10星完整中獎機率與固定彩金對照表。', keywords: '賓果機率, 賓果獎金' });
     // 預先對各星數的獎金結構反轉排序 (10星~1星) 顯示，並生成 4 種狀態的表格
     const reversedTables = [...PRIZE_TABLES].reverse();
 

@@ -39,6 +39,8 @@ interface UseBingoDataReturn {
         bigSmallResult: string;
         /** 單雙結果：單/雙/－（需 ≥13 顆才成立） */
         oddEvenResult: string;
+        /** 所有開獎號碼總和 (和值) */
+        sum: number;
     } | null;
     countdown: number;
     refresh: () => void;
@@ -216,6 +218,7 @@ function calculateStats(numbers: number[]) {
         oddEvenRatio: `${oddCount}:${evenCount}`,
         bigSmallResult,
         oddEvenResult,
+        sum: numbers.reduce((a, b) => a + b, 0),
     };
 }
 

@@ -1,11 +1,14 @@
+import { useSeo } from '../hooks/useSeo';
 /**
  * 最新開獎頁面
  * 僅顯示即時模式：最新期數、盤路統計、近期開獎紀錄
  */
 import { useBingoData } from '../hooks/useBingoData';
+import { BingoGrid } from '../components/BingoGrid';
 
 export default function BingoLatest() {
-    const { latestDraw, latestStats, loading, countdown, draws, error } = useBingoData();
+    useSeo({ title: '最新即時開獎', description: '追蹤最新期數賓果開獎號碼與連莊動態。', keywords: '賓果最新開獎, 賓果開獎號碼' });
+    const { latestDraw, latestStats, loading, countdown, draws, error, refresh } = useBingoData();
 
     /** 格式化 Date 物件為顯示用字串 */
     const formatDate = (dt: Date) =>
@@ -58,6 +61,9 @@ export default function BingoLatest() {
                     <span className="badge badge-success" style={{ padding: '4px 12px', fontSize: '0.8rem' }}>
                         🟢 即時模式
                     </span>
+                    <button onClick={refresh} className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.8rem' }} disabled={loading}>
+                        🔄 刷新
+                    </button>
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>⏱ {countdown}s 後更新</span>
                 </div>
             </div>
@@ -151,9 +157,43 @@ export default function BingoLatest() {
                                     </div>
                                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>(單 : 雙，≥13成立)</span>
                                 </div>
+                                <div>
+                                    <span className="form-label">和值</span>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: 'var(--font-display)', letterSpacing: 1 }}>
+                                        {latestStats.sum}
+                                        <span style={{ marginLeft: 8, fontSize: '1rem', color: latestStats.sum >= 811 ? 'var(--danger)' : 'var(--info)' }}>
+                                            ({latestStats.sum >= 811 ? '大' : '小'})
+                                        </span>
+                                    </div>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>(總和 ≥811 為大)</span>
+                                </div>
                             </div>
                         </div>
                     )}
+
+                    {/* 80 號碼方格 */}
+                    <div className="card" style={{ marginBottom: 20 }}>
+                        <h3 className="section-title">🔲 號碼分佈圖</h3>
+                        <div style={{ display: 'flex', gap: 12, marginBottom: 12, fontSize: '0.85rem' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <div style={{ width: 12, height: 12, background: '#F87171', borderRadius: 2 }} /> 大數 (41-80)
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <div style={{ width: 12, height: 12, background: '#60A5FA', borderRadius: 2 }} /> 小數 (1-40)
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <div style={{ width: 12, height: 12, background: '#F59E0B', borderRadius: 2 }} /> 超級獎號
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8 }}>
+                                🔁 連莊標記
+                            </span>
+                        </div>
+                        <BingoGrid 
+                            drawnNumbers={latestDraw.numbers} 
+                            superNumber={latestDraw.superNumber} 
+                            previousNumbers={draws[1]?.numbers || []}
+                        />
+                    </div>
 
                     {/* 近 20 期列表 */}
                     <div className="card">
@@ -165,48 +205,71 @@ export default function BingoLatest() {
                                         <th>期數</th>
                                         <th>時間</th>
                                         <th>開獎號碼</th>
-                                        <th>超級獎號</th>
+                                        <th style={{ textAlign: 'center' }}>超級獎號</th>
+                                        <th>盤路分析</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {draws.slice(0, 20).map((draw) => (
-                                        <tr key={draw.period}>
-                                            <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
-                                                {draw.period}
-                                            </td>
-                                            <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                                {getDrawTime(draw)}
-                                            </td>
-                                            <td>
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                                                    {draw.numbers.map((n) => (
-                                                        <span
-                                                            key={n}
-                                                            style={{
-                                                                display: 'inline-block',
-                                                                width: 26, height: 26,
-                                                                lineHeight: '26px', textAlign: 'center',
-                                                                borderRadius: '50%',
-                                                                fontSize: '0.65rem', fontWeight: 700,
-                                                                fontFamily: 'var(--font-mono)',
-                                                                background: n === draw.superNumber
-                                                                    ? 'var(--warning)'
-                                                                    : 'var(--primary)',
-                                                                color: n === draw.superNumber
-                                                                    ? 'var(--primary)'
-                                                                    : 'var(--text-inverse)',
-                                                            }}
-                                                        >
-                                                            {n}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span className="badge badge-warning" style={{ fontSize: '0.85rem' }}>{draw.superNumber}</span>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {draws.slice(0, 20).map((draw) => {
+                                        // 計算大小、單雙、和值
+                                        const sum = draw.numbers.reduce((a, b) => a + b, 0);
+                                        const sumResult = sum >= 811 ? '大和' : '小和';
+                                        
+                                        let bigCount = 0;
+                                        let oddCount = 0;
+                                        draw.numbers.forEach(n => {
+                                            if (n > 40) bigCount++;
+                                            if (n % 2 !== 0) oddCount++;
+                                        });
+                                        const bsResult = bigCount > 10 ? '大' : (bigCount < 10 ? '小' : '和');
+                                        const oeResult = oddCount > 10 ? '單' : (oddCount < 10 ? '雙' : '和');
+
+                                        return (
+                                            <tr key={draw.period}>
+                                                <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+                                                    {draw.period}
+                                                </td>
+                                                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                    {getDrawTime(draw)}
+                                                </td>
+                                                <td>
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                                                        {draw.numbers.map((n) => (
+                                                            <span
+                                                                key={n}
+                                                                style={{
+                                                                    display: 'inline-block',
+                                                                    width: 26, height: 26,
+                                                                    lineHeight: '26px', textAlign: 'center',
+                                                                    borderRadius: '50%',
+                                                                    fontSize: '0.65rem', fontWeight: 700,
+                                                                    fontFamily: 'var(--font-mono)',
+                                                                    background: n === draw.superNumber
+                                                                        ? 'var(--warning)'
+                                                                        : 'var(--primary)',
+                                                                    color: n === draw.superNumber
+                                                                        ? 'var(--primary)'
+                                                                        : 'var(--text-inverse)',
+                                                                }}
+                                                            >
+                                                                {n}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <span className="badge badge-warning" style={{ fontSize: '0.85rem' }}>{draw.superNumber}</span>
+                                                </td>
+                                                <td>
+                                                    <div style={{ display: 'flex', gap: 4 }}>
+                                                        <span className="badge" style={{ background: bsResult === '大' ? 'rgba(239,68,68,0.1)' : 'rgba(59,130,246,0.1)', color: bsResult === '大' ? 'var(--danger)' : 'var(--accent-blue)' }}>{bsResult}</span>
+                                                        <span className="badge" style={{ background: oeResult === '單' ? 'rgba(245,158,11,0.1)' : 'rgba(167,139,250,0.1)', color: oeResult === '單' ? 'var(--warning)' : '#a78bfa' }}>{oeResult}</span>
+                                                        <span className="badge" style={{ background: sumResult === '大和' ? 'rgba(239,68,68,0.1)' : 'rgba(59,130,246,0.1)', color: sumResult === '大和' ? 'var(--danger)' : 'var(--accent-blue)' }}>{sumResult}</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>

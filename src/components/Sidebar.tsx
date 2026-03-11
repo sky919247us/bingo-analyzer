@@ -21,8 +21,10 @@ const QUANT_NAV = [
 const BINGO_NAV = [
     { to: '/bingo-latest', label: '最新開獎', icon: '🏅', end: false },
     { to: '/bingo-prediction', label: '號碼預測', icon: '🔮', end: false },
+    { to: '/bingo-records', label: '預測紀錄', icon: '📋', end: false },
+    { to: '/bingo-distribution', label: '獎號分布', icon: '🎯', end: false },
     { to: '/bingo-statistics', label: '統計分析', icon: '📈', end: false },
-    { to: '/bingo-records', label: '歷史紀錄', icon: '📋', end: false },
+    { to: '/dashboard-large', label: '大螢幕模式', icon: '🖥️', end: false },
 ];
 
 interface SidebarProps {
@@ -47,7 +49,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
             <aside className={`sidebar${isOpen ? ' sidebar-open' : ''}`}>
                 <div className="sidebar-brand">
-                    <span className="logo-icon">B</span>
                     刮刮研究室
                 </div>
 
@@ -100,6 +101,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         ))}
                     </div>
                 </nav>
+
+                <div className="sidebar-footer" style={{ padding: '20px', marginTop: 'auto', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'center' }}>
+                    <a href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer" aria-label="刮刮研究室 YouTube 頻道" style={{ color: '#ff0000', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', fontWeight: 'bold' }}>
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                        </svg>
+                        訂閱頻道
+                    </a>
+                </div>
             </aside>
         </>
     );

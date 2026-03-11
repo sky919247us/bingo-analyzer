@@ -1,3 +1,4 @@
+import { useSeo } from '../hooks/useSeo';
 /**
  * 儀表板頁面
  * 顯示期望值熱力圖 + 快速計算面板
@@ -47,6 +48,7 @@ function getEvColor(ev: number): string {
 }
 
 export default function Dashboard() {
+    useSeo({ title: '總覽儀表板', description: '刮刮研究室的全方位數據總覽，快速瀏覽開獎概況與趨勢。', keywords: '刮刮研究室, 大盤數據' });
     // 期望值矩陣計算
     const evData = useMemo(() => {
         const data = [];

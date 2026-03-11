@@ -1,3 +1,4 @@
+import { useSeo } from '../hooks/useSeo';
 /**
  * 歷史回測頁面
  * 自動支援 public/data/ 內的 CSV 歷史開獎資料
@@ -20,6 +21,7 @@ const AVAILABLE_YEARS = [
 const PIE_COLORS = ['#00ff87', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171', '#22d3ee', '#818cf8', '#fb923c', '#34d399', '#f472b6', '#94a3b8'];
 
 export default function Backtest() {
+    useSeo({ title: '歷史回測實驗室', description: '使用歷屆數萬期真實開獎數據進行你的專屬打法與策略回測。', keywords: '策略回測, 量化分析' });
     const [data, setData] = useState<DrawResult[]>([]);
     const [fileName, setFileName] = useState('');
     const [loading, setLoading] = useState(false);

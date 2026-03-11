@@ -1,3 +1,4 @@
+import { useSeo } from '../hooks/useSeo';
 /**
  * 歷史紀錄頁面
  * 列出所有儲存的預測/自選紀錄，支援兌獎功能（自動比對開獎結果）
@@ -16,6 +17,7 @@ import {
 } from '../utils/bingo-checker';
 
 export default function BingoRecords() {
+    useSeo({ title: '預測兌獎記錄', description: '全面追蹤並檢驗過去所有專注賓果中獎與預測的歷史紀錄。', keywords: '歷史開獎記錄, 預測驗證' });
     const [records, setRecords] = useState<PredictionRecord[]>([]);
     const [checkResults, setCheckResults] = useState<Map<string, CheckResult>>(new Map());
     const [checkingId, setCheckingId] = useState<string | null>(null);
@@ -77,53 +79,73 @@ export default function BingoRecords() {
     };
 
     /** 渲染單期兌獎結果 */
-    const renderDrawResult = (dr: SingleDrawCheckResult, idx: number) => (
-        <div
-            key={dr.period}
-            style={{
-                padding: '8px 12px',
-                background: dr.prize > 0 ? 'rgba(30,132,73,0.08)' : 'var(--bg-page)',
-                borderRadius: 'var(--radius-sm)',
-                border: `1px solid ${dr.prize > 0 ? 'var(--success)' : 'var(--border-light)'}`,
-                fontSize: '0.85rem',
-            }}
-        >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <span style={{ fontWeight: 700, color: 'var(--primary)' }}>
-                    第{idx + 1}期 #{dr.period}
-                </span>
-                {dr.prize > 0 ? (
-                    <span className="badge badge-success" style={{ fontSize: '0.8rem' }}>
-                        🎉 中獎 ${dr.prize.toLocaleString()}
-                    </span>
-                ) : (
-                    <span className="badge badge-neutral" style={{ fontSize: '0.8rem' }}>未中獎</span>
-                )}
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                {dr.drawNumbers.slice(0, 20).map((n) => {
-                    const isHit = dr.hitNumbers.includes(n);
-                    return (
-                        <span
-                            key={n}
-                            style={{
-                                display: 'inline-block', width: 24, height: 24,
-                                lineHeight: '24px', textAlign: 'center',
-                                borderRadius: '50%', fontSize: '0.6rem', fontWeight: 700,
-                                background: isHit ? 'var(--success)' : 'var(--border-light)',
-                                color: isHit ? 'var(--text-inverse)' : 'var(--text-muted)',
-                            }}
-                        >
-                            {n}
+    const renderDrawResult = (dr: SingleDrawCheckResult, idx: number) => {
+        // 算出開獎的單雙大小和值
+        const sum = dr.drawNumbers.reduce((a, b) => a + b, 0);
+        const sumResult = sum >= 811 ? '大和' : '小和';
+        let bigCount = 0; let oddCount = 0;
+        dr.drawNumbers.forEach(n => {
+            if (n > 40) bigCount++;
+            if (n % 2 !== 0) oddCount++;
+        });
+        const bsResult = bigCount > 10 ? '大' : (bigCount < 10 ? '小' : '和');
+        const oeResult = oddCount > 10 ? '單' : (oddCount < 10 ? '雙' : '和');
+
+        return (
+            <div
+                key={dr.period}
+                style={{
+                    padding: '8px 12px',
+                    background: dr.prize > 0 ? 'rgba(30,132,73,0.08)' : 'var(--bg-page)',
+                    borderRadius: 'var(--radius-sm)',
+                    border: `1px solid ${dr.prize > 0 ? 'var(--success)' : 'var(--border-light)'}`,
+                    fontSize: '0.85rem',
+                }}
+            >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--primary)' }}>
+                            第{idx + 1}期 #{dr.period}
                         </span>
-                    );
-                })}
+                        <div style={{ display: 'flex', gap: 4 }}>
+                            <span className="badge" style={{ background: bsResult === '大' ? 'rgba(239,68,68,0.1)' : 'rgba(59,130,246,0.1)', color: bsResult === '大' ? 'var(--danger)' : 'var(--accent-blue)', fontSize: '0.65rem', padding: '0 4px' }}>{bsResult}</span>
+                            <span className="badge" style={{ background: oeResult === '單' ? 'rgba(245,158,11,0.1)' : 'rgba(167,139,250,0.1)', color: oeResult === '單' ? 'var(--warning)' : '#a78bfa', fontSize: '0.65rem', padding: '0 4px' }}>{oeResult}</span>
+                            <span className="badge" style={{ background: sumResult === '大和' ? 'rgba(239,68,68,0.1)' : 'rgba(59,130,246,0.1)', color: sumResult === '大和' ? 'var(--danger)' : 'var(--accent-blue)', fontSize: '0.65rem', padding: '0 4px' }}>{sumResult}</span>
+                        </div>
+                    </div>
+                    {dr.prize > 0 ? (
+                        <span className="badge badge-success" style={{ fontSize: '0.8rem' }}>
+                            🎉 中獎 ${dr.prize.toLocaleString()}
+                        </span>
+                    ) : (
+                        <span className="badge badge-neutral" style={{ fontSize: '0.8rem' }}>未中獎</span>
+                    )}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                    {dr.drawNumbers.slice(0, 20).map((n) => {
+                        const isHit = dr.hitNumbers.includes(n);
+                        return (
+                            <span
+                                key={n}
+                                style={{
+                                    display: 'inline-block', width: 24, height: 24,
+                                    lineHeight: '24px', textAlign: 'center',
+                                    borderRadius: '50%', fontSize: '0.6rem', fontWeight: 700,
+                                    background: isHit ? 'var(--success)' : 'var(--border-light)',
+                                    color: isHit ? 'var(--text-inverse)' : 'var(--text-muted)',
+                                }}
+                            >
+                                {n}
+                            </span>
+                        );
+                    })}
+                </div>
+                <div style={{ marginTop: 4, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    命中 {dr.hitCount} 顆：{dr.hitNumbers.length > 0 ? dr.hitNumbers.join(', ') : '—'}
+                </div>
             </div>
-            <div style={{ marginTop: 4, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                命中 {dr.hitCount} 顆：{dr.hitNumbers.length > 0 ? dr.hitNumbers.join(', ') : '—'}
-            </div>
-        </div>
-    );
+        );
+    };
 
     return (
         <div className="animate-in">

@@ -1,3 +1,4 @@
+import { useSeo } from '../hooks/useSeo';
 /**
  * 號碼預測頁面
  * 支援策略預測 + 自選號碼（1-80 號碼盤，一行 10 個）+ 儲存紀錄
@@ -21,6 +22,7 @@ const ALL_NUMBERS = Array.from({ length: 80 }, (_, i) => i + 1);
 const PERIOD_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12];
 
 export default function BingoPrediction() {
+    useSeo({ title: 'AI 號碼預測', description: '多星數賓果AI預測模型，包含追熱、補冷與跳期規律策略推薦。', keywords: '賓果預測, 賓果報牌' });
     const { draws, loading, countdown } = useBingoData();
 
     /* 策略預測狀態 */
