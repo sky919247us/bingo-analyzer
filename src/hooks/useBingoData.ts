@@ -14,7 +14,7 @@ const AVAILABLE_YEARS = [
 ];
 
 /** 後端 API 基底 URL */
-const API_BASE = 'http://localhost:8888';
+const API_BASE = 'https://solitary-cherry-7401.sky919247us.workers.dev';
 
 /** 台彩公開 API 端點（前端直連用） */
 const TLC_LATEST_URL = 'https://api.taiwanlottery.com/TLCAPIWeB/Lottery/LatestBingoResult';
@@ -100,7 +100,7 @@ async function fetchLiveLatest(): Promise<BingoDrawData | null> {
                     period: String(d.drawTerm),
                     drawTime: d.dDate,
                     numbers: d.bigShowOrder.map((n: string) => parseInt(n, 10)),
-                    superNumber: parseInt(d.superNumber, 10),
+                    superNumber: parseInt(d.prizeNum?.bullEye || '0', 10),
                 };
             }
         }
@@ -123,11 +123,11 @@ async function fetchLiveHistory(): Promise<BingoDrawData[]> {
         if (resp.ok) {
             const json = await resp.json();
             if (json.success && json.data?.draws && json.data.draws.length > 0) {
-                return json.data.draws.map((d: Record<string, unknown>) => ({
+                return json.data.draws.map((d: any) => ({
                     period: String(d.drawTerm),
                     drawTime: (d.dDate as string) || today,
                     numbers: (d.bigShowOrder as string[]).map((n: string) => parseInt(n, 10)),
-                    superNumber: parseInt(d.superNumber as string, 10),
+                    superNumber: parseInt(d.bullEyeTop || d.superNumber || '0', 10),
                 }));
             }
         }
