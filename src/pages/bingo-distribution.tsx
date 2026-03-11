@@ -5,14 +5,27 @@ export default function BingoDistribution() {
     useSeo({ title: '獎號分布走勢', description: '統整80顆賓果號碼的開獎分佈圖，掌握冷熱趨勢與超級獎號落點。', keywords: '號碼分佈圖, 獎號分析' });
     const { draws, loading, error } = useBingoData();
 
-    // 格式化開獎時間，只取 HH:mm
-    const getDrawTime = (dateStr: string) => {
-        try {
-            const d = new Date(dateStr);
-            return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-        } catch {
-            return dateStr.substring(11, 16);
+    // 根據 Bingo 期數推演精確的時間 (台彩每日 1~203 期，從 07:05 開始，每 5 分鐘一期)
+    const getDrawTime = (draw: { period: string; drawTime: string }) => {
+        const periodNum = parseInt(draw.period, 10);
+        if (!isNaN(periodNum)) {
+            const dailyNum = periodNum % 1000;
+            if (dailyNum >= 1 && dailyNum <= 203) {
+                const totalMins = 7 * 60 + 5 + (dailyNum - 1) * 5;
+                const hh = Math.floor(totalMins / 60).toString().padStart(2, '0');
+                const mm = (totalMins % 60).toString().padStart(2, '0');
+                return `${hh}:${mm}`;
+            }
         }
+        
+        try {
+            const d = new Date(draw.drawTime);
+            if (d.getHours() !== 0 || d.getMinutes() !== 0) {
+                return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+            }
+        } catch {}
+        
+        return draw.drawTime.substring(11, 16) || "00:00";
     };
 
     /** 解析每期的大小單雙屬性 */
@@ -88,7 +101,7 @@ export default function BingoDistribution() {
                                                 color: 'var(--text-main)',
                                                 boxShadow: '2px 0 5px rgba(0,0,0,0.05)'
                                             }}>
-                                                {getDrawTime(draw.drawTime)}
+                                                {getDrawTime(draw)}
                                             </td>
                                             
                                             {/* 大小 Badge */}

@@ -125,12 +125,34 @@ export default function BingoStatistics() {
     const trendData = useMemo(() => {
         if (draws.length === 0) return null;
         
+        // 算出今日盤路統計
+        const last3 = parseInt(draws[0].period, 10) % 1000;
+        const todayCount = isNaN(last3) ? 203 : last3;
+        const todayDraws = draws.slice(0, Math.min(todayCount, draws.length));
+        
+        let bigToday = 0;
+        let smallToday = 0;
+        let oddToday = 0;
+        let evenToday = 0;
+
+        for (const d of todayDraws) {
+            let big = 0, odd = 0;
+            d.numbers.forEach(n => {
+                if (n > 40) big++;
+                if (n % 2 !== 0) odd++;
+            });
+            if (big > 10) bigToday++;
+            if (big < 10) smallToday++;
+            if (odd > 10) oddToday++;
+            if (odd < 10) evenToday++;
+        }
+
         let currentBigGap = 0;
         let currentSmallGap = 0;
         let currentOddGap = 0;
         let currentEvenGap = 0;
         
-        // 假設 draws 是當日由新到舊
+        // 由新到舊計算遺漏期數
         for (const d of draws) {
             let bigCount = 0;
             let oddCount = 0;
@@ -164,6 +186,11 @@ export default function BingoStatistics() {
             smallGap: Math.max(0, currentSmallGap),
             oddGap: Math.max(0, currentOddGap),
             evenGap: Math.max(0, currentEvenGap),
+            bigToday,
+            smallToday,
+            oddToday,
+            evenToday,
+            totalToday: todayDraws.length
         };
     }, [draws]);
 
@@ -392,21 +419,33 @@ export default function BingoStatistics() {
                             <h3 className="section-title">📉 盤路連續未開 (遺漏) 走勢</h3>
                             {trendData && (
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-page)', borderRadius: 'var(--radius-sm)', borderLeft: '4px solid var(--accent-red)' }}>
-                                        <span style={{ fontWeight: 'bold' }}>大</span>
-                                        <span>{trendData.bigGap === 0 ? <span style={{color:'var(--accent-green)'}}>連開 / 剛出</span> : <span style={{color:'var(--danger)'}}>遺漏 {trendData.bigGap} 期</span>}</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--bg-page)', borderRadius: 'var(--radius-sm)', borderLeft: '4px solid var(--accent-red)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                            <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>大</span>
+                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>今日 {trendData.bigToday} 次</span>
+                                        </div>
+                                        <span>{trendData.bigGap === 0 ? <span style={{color:'var(--accent-green)'}}>連莊 / 剛出</span> : <span style={{color:'var(--danger)'}}>遺漏 {trendData.bigGap} 期</span>}</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-page)', borderRadius: 'var(--radius-sm)', borderLeft: '4px solid var(--accent-blue)' }}>
-                                        <span style={{ fontWeight: 'bold' }}>小</span>
-                                        <span>{trendData.smallGap === 0 ? <span style={{color:'var(--accent-green)'}}>連開 / 剛出</span> : <span style={{color:'var(--danger)'}}>遺漏 {trendData.smallGap} 期</span>}</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--bg-page)', borderRadius: 'var(--radius-sm)', borderLeft: '4px solid var(--accent-blue)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                            <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>小</span>
+                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>今日 {trendData.smallToday} 次</span>
+                                        </div>
+                                        <span>{trendData.smallGap === 0 ? <span style={{color:'var(--accent-green)'}}>連莊 / 剛出</span> : <span style={{color:'var(--danger)'}}>遺漏 {trendData.smallGap} 期</span>}</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-page)', borderRadius: 'var(--radius-sm)', borderLeft: '4px solid var(--warning)' }}>
-                                        <span style={{ fontWeight: 'bold' }}>單</span>
-                                        <span>{trendData.oddGap === 0 ? <span style={{color:'var(--accent-green)'}}>連開 / 剛出</span> : <span style={{color:'var(--danger)'}}>遺漏 {trendData.oddGap} 期</span>}</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--bg-page)', borderRadius: 'var(--radius-sm)', borderLeft: '4px solid var(--warning)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                            <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>單</span>
+                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>今日 {trendData.oddToday} 次</span>
+                                        </div>
+                                        <span>{trendData.oddGap === 0 ? <span style={{color:'var(--accent-green)'}}>連莊 / 剛出</span> : <span style={{color:'var(--danger)'}}>遺漏 {trendData.oddGap} 期</span>}</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-page)', borderRadius: 'var(--radius-sm)', borderLeft: '4px solid var(--primary)' }}>
-                                        <span style={{ fontWeight: 'bold' }}>雙</span>
-                                        <span>{trendData.evenGap === 0 ? <span style={{color:'var(--accent-green)'}}>連開 / 剛出</span> : <span style={{color:'var(--danger)'}}>遺漏 {trendData.evenGap} 期</span>}</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--bg-page)', borderRadius: 'var(--radius-sm)', borderLeft: '4px solid var(--primary)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                            <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>雙</span>
+                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>今日 {trendData.evenToday} 次</span>
+                                        </div>
+                                        <span>{trendData.evenGap === 0 ? <span style={{color:'var(--accent-green)'}}>連莊 / 剛出</span> : <span style={{color:'var(--danger)'}}>遺漏 {trendData.evenGap} 期</span>}</span>
                                     </div>
                                 </div>
                             )}
