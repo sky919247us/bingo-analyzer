@@ -5,10 +5,22 @@ export default function BingoDistribution() {
     useSeo({ title: '獎號分布走勢', description: '統整80顆賓果號碼的開獎分佈圖，掌握冷熱趨勢與超級獎號落點。', keywords: '號碼分佈圖, 獎號分析' });
     const { draws, loading, error } = useBingoData();
 
-    // 根據 Bingo 期數推演精確的時間 (台彩每日 1~203 期，從 07:05 開始，每 5 分鐘一期)
+    /** 
+     * 根據 Bingo 期數推演精確的時間
+     * 台彩每日 1~203 期，從 07:05 開始，每 5 分鐘一期。
+     * 由於期數末三位 (如 630) 是累積序號，我們需要計算當日的相對序號。
+     */
     const getDrawTime = (draw: { period: string; drawTime: string }) => {
         const periodNum = parseInt(draw.period, 10);
         if (!isNaN(periodNum)) {
+            /** 
+             * 修正公式：
+             * 截圖顯示 23:05 的行對應的是剛開出的獎號 (約 23:07)。
+             * 23:05 應該是今天的第 193 期 ( (23*60+5 - (7*60+5)) / 5 + 1 = 193 )
+             * 我們目前的 periodNum 末三位是累積的，所以可以用取餘數的方式抓出當日序號。
+             * 台灣 Bingo 的期數編碼通常是：115(年) 01(月) 11(日) XXX(序號)
+             * 所以末三位就是當天的 dailyNum。
+             */
             const dailyNum = periodNum % 1000;
             if (dailyNum >= 1 && dailyNum <= 203) {
                 const totalMins = 7 * 60 + 5 + (dailyNum - 1) * 5;
