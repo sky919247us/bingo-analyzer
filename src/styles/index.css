@@ -199,6 +199,7 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   /* 避免 flex child 破版 */
 }
 
@@ -251,6 +252,7 @@ body {
 .main-content {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: var(--space-xl);
   background: var(--bg-page);
 }
