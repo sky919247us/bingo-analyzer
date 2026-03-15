@@ -155,7 +155,7 @@ export default function BingoPrediction() {
                                     投注倍數
                                 </label>
                                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                                    {[1, 2, 5, 10, 25, 50].map((m) => (
+                                    {[1, 2, 3, 4, 5, 6, 8, 10, 12, 20, 50].map((m) => (
                                         <button
                                             key={m}
                                             className={`strategy-btn${betMultiplier === m ? ' selected' : ''}`}

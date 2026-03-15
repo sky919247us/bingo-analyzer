@@ -1315,3 +1315,146 @@ select.form-input {
     padding: var(--space-sm);
   }
 }
+
+/* ============================================
+ * 大小單雙統計樣式
+ * ============================================ */
+.bs-header {
+  background: #F39C12;
+  color: white;
+  font-weight: 800;
+  padding: 8px 12px;
+  border-radius: 8px 8px 0 0;
+  text-align: left;
+  font-size: 1.1rem;
+}
+.bs-body {
+  background: #FFF8DC;
+  padding: 12px;
+  border-radius: 0 0 8px 8px;
+}
+.bs-labels {
+  display: flex;
+  margin-left: 60px;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+.bs-labels > div {
+  flex: 1;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  background: white;
+  padding: 4px;
+  border-radius: 4px;
+}
+.bs-label-count { color: #3B82F6; }
+.bs-label-gap { color: #D32F2F; }
+
+.bs-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 8px;
+  border-radius: 8px;
+}
+.bs-row.blue { background: #92B4F2; }
+.bs-row.green { background: #A2D9B3; }
+.bs-row.dark { background: #AAB7C4; }
+.bs-row.pink { background: #F4A6D7; }
+
+.bs-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: white;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.bs-icon.blue { background: #0000FF; }
+.bs-icon.green { background: #008000; }
+.bs-icon.dark { background: #333333; }
+.bs-icon.pink { background: #FF00FF; }
+
+.bs-value {
+  flex: 1;
+  background: white;
+  color: #3B82F6;
+  font-size: 1.5rem;
+  font-weight: 900;
+  text-align: center;
+  border-radius: 8px;
+  padding: 4px 0;
+}
+.bs-value.gap { color: #D32F2F; }
+
+/* ============================================
+ * 盤路連續未開矩陣樣式
+ * ============================================ */
+.matrix-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.matrix-board {
+  flex: 1 1 calc(33.333% - 12px);
+  min-width: 250px;
+  background: black;
+  color: white;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.matrix-header {
+  color: #F39C12;
+  font-size: 1.2rem;
+  padding: 4px 8px;
+  border-bottom: 1px solid #333;
+}
+.matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(11, 1fr);
+  text-align: center;
+}
+.matrix-cell {
+  padding: 2px 0;
+  color: #333;
+}
+.matrix-cell.drawn {
+  color: white;
+}
+.matrix-cell.drawn.super {
+  color: #F39C12;
+}
+.matrix-cell.row-hl {
+  background: #990000;
+  color: #888;
+}
+.matrix-cell.row-hl.drawn {
+  color: white;
+}
+.matrix-cell.col-hl {
+  background: #000099;
+  color: #888;
+}
+.matrix-cell.col-hl.drawn {
+  color: white;
+}
+.matrix-cell.intersect-hl {
+  background: #990099;
+  color: #888;
+}
+.matrix-cell.intersect-hl.drawn {
+  color: white;
+}
+.matrix-sum {
+  color: #F39C12;
+}
+.matrix-sum.hl {
+  color: red;
+}

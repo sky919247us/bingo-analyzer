@@ -414,41 +414,105 @@ export default function BingoStatistics() {
                             </div>
                         </div>
 
-                        {/* 盤路遺漏走勢 */}
-                        <div className="glass-card">
-                            <h3 className="section-title">📉 盤路連續未開 (遺漏) 走勢</h3>
-                            {trendData && (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--bg-page)', borderRadius: 'var(--radius-sm)', borderLeft: '4px solid var(--accent-red)' }}>
-                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                            <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>大</span>
-                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>今日 {trendData.bigToday} 次</span>
-                                        </div>
-                                        <span>{trendData.bigGap === 0 ? <span style={{color:'var(--accent-green)'}}>連莊 / 剛出</span> : <span style={{color:'var(--danger)'}}>遺漏 {trendData.bigGap} 期</span>}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--bg-page)', borderRadius: 'var(--radius-sm)', borderLeft: '4px solid var(--accent-blue)' }}>
-                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                            <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>小</span>
-                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>今日 {trendData.smallToday} 次</span>
-                                        </div>
-                                        <span>{trendData.smallGap === 0 ? <span style={{color:'var(--accent-green)'}}>連莊 / 剛出</span> : <span style={{color:'var(--danger)'}}>遺漏 {trendData.smallGap} 期</span>}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--bg-page)', borderRadius: 'var(--radius-sm)', borderLeft: '4px solid var(--warning)' }}>
-                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                            <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>單</span>
-                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>今日 {trendData.oddToday} 次</span>
-                                        </div>
-                                        <span>{trendData.oddGap === 0 ? <span style={{color:'var(--accent-green)'}}>連莊 / 剛出</span> : <span style={{color:'var(--danger)'}}>遺漏 {trendData.oddGap} 期</span>}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--bg-page)', borderRadius: 'var(--radius-sm)', borderLeft: '4px solid var(--primary)' }}>
-                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                            <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>雙</span>
-                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>今日 {trendData.evenToday} 次</span>
-                                        </div>
-                                        <span>{trendData.evenGap === 0 ? <span style={{color:'var(--accent-green)'}}>連莊 / 剛出</span> : <span style={{color:'var(--danger)'}}>遺漏 {trendData.evenGap} 期</span>}</span>
-                                    </div>
+                        {/* 大小單雙統計 */}
+                        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                            <div className="bs-header">大小單雙統計</div>
+                            <div className="bs-body">
+                                <div className="bs-labels">
+                                    <div className="bs-label-count">次數</div>
+                                    <div className="bs-label-gap">未開</div>
                                 </div>
-                            )}
+                                {trendData && (
+                                    <>
+                                        <div className="bs-row blue">
+                                            <div className="bs-icon blue">大</div>
+                                            <div className="bs-value">{trendData.bigToday}</div>
+                                            <div className="bs-value gap">{trendData.bigGap}</div>
+                                        </div>
+                                        <div className="bs-row green">
+                                            <div className="bs-icon green">小</div>
+                                            <div className="bs-value">{trendData.smallToday}</div>
+                                            <div className="bs-value gap">{trendData.smallGap}</div>
+                                        </div>
+                                        <div className="bs-row dark">
+                                            <div className="bs-icon dark">單</div>
+                                            <div className="bs-value">{trendData.oddToday}</div>
+                                            <div className="bs-value gap">{trendData.oddGap}</div>
+                                        </div>
+                                        <div className="bs-row pink">
+                                            <div className="bs-icon pink">雙</div>
+                                            <div className="bs-value">{trendData.evenToday}</div>
+                                            <div className="bs-value gap">{trendData.evenGap}</div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 頭尾號盤路走勢矩陣 */}
+                    <div className="card" style={{ marginBottom: 20 }}>
+                        <h3 className="section-title">📉 盤路連續未開 (遺漏) 走勢</h3>
+                        <div style={{ color: 'var(--danger)', fontSize: '0.85rem', fontWeight: 600, marginBottom: 12 }}>
+                            ※當頭號或尾號開出4顆(含)以上的球號時，系統才會顯示光棒標示！
+                        </div>
+                        <div className="matrix-container">
+                            {draws.slice(0, 6).map((draw) => {
+                                const rowCounts = new Array(8).fill(0);
+                                const colCounts = new Array(10).fill(0);
+                                draw.numbers.forEach(num => {
+                                    const row = Math.floor((num - 1) / 10);
+                                    let col = num % 10;
+                                    if (col === 0) col = 10;
+                                    colCounts[col - 1]++;
+                                    rowCounts[row]++;
+                                });
+
+                                return (
+                                    <div key={draw.period} className="matrix-board">
+                                        <div className="matrix-header">{draw.period}</div>
+                                        <div className="matrix-grid">
+                                            {Array.from({ length: 8 }, (_, r) => {
+                                                const isRowHl = rowCounts[r] >= 4;
+                                                const cells = Array.from({ length: 10 }, (_, c) => {
+                                                    const num = r * 10 + c + 1;
+                                                    const isDrawn = draw.numbers.includes(num);
+                                                    const isSuper = draw.superNumber === num;
+                                                    const isColHl = colCounts[c] >= 4;
+                                                    
+                                                    let hlClass = '';
+                                                    if (isRowHl && isColHl) hlClass = 'intersect-hl';
+                                                    else if (isRowHl) hlClass = 'row-hl';
+                                                    else if (isColHl) hlClass = 'col-hl';
+
+                                                    const drawnClass = isDrawn ? (isSuper ? 'drawn super' : 'drawn') : '';
+                                                    
+                                                    return (
+                                                        <div key={num} className={`matrix-cell ${hlClass} ${drawnClass}`}>
+                                                            {num.toString().padStart(2, '0')}
+                                                        </div>
+                                                    );
+                                                });
+                                                cells.push(
+                                                    <div key={`sum-${r}`} className={`matrix-sum ${isRowHl ? 'hl' : ''}`}>
+                                                        {rowCounts[r]}
+                                                    </div>
+                                                );
+                                                return cells;
+                                            }).flat()}
+                                            {Array.from({ length: 10 }, (_, c) => {
+                                                const isColHl = colCounts[c] >= 4;
+                                                return (
+                                                    <div key={`col-${c}`} className={`matrix-sum ${isColHl ? 'hl' : ''}`}>
+                                                        {colCounts[c]}
+                                                    </div>
+                                                );
+                                            })}
+                                            <div></div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 
