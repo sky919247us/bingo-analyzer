@@ -13,17 +13,13 @@ const AVAILABLE_YEARS = [
     2019, 2018, 2017, 2016, 2015, 2014, 2013,
 ];
 
-/** 後端 API 基底 URL */
-const API_BASE = 'https://solitary-cherry-7401.sky919247us.workers.dev';
+/** 後端 API 基底 URL (對應新建的 Cloudflare Worker) */
+const API_BASE = 'https://bingo-kv-worker.sky919247us.workers.dev';
 
-/** 台彩公開 API 端點（前端直連用） */
-const TLC_LATEST_URL = 'https://api.taiwanlottery.com/TLCAPIWeB/Lottery/LatestBingoResult';
-const TLC_HISTORY_URL = 'https://api.taiwanlottery.com/TLCAPIWeB/Lottery/BingoResult';
+/** 即時模式刷新間隔（毫秒）— 每 300 秒(5分鐘)取一次最新期 */
+const LIVE_REFRESH_INTERVAL = 300_000;
 
-/** 即時模式刷新間隔（毫秒）— 每 60 秒取一次最新期 */
-const LIVE_REFRESH_INTERVAL = 60_000;
-
-/** CSV 模式刷新間隔（毫秒）— 同樣 60 秒 */
+/** CSV 模式刷新間隔（毫秒）— 保持 60 秒 */
 const CSV_REFRESH_INTERVAL = 60_000;
 
 interface UseBingoDataReturn {
@@ -57,139 +53,24 @@ interface UseBingoDataReturn {
 }
 
 /**
- * 直接從台彩公開 API 取得最新開獎（不需後端代理）
+ * 從 Worker KV API 取得今日歷史
  */
-async function fetchFromTlcApi(): Promise<BingoDrawData | null> {
+async function fetchFromKV(): Promise<{ draws: BingoDrawData[], lastUpdated: string | null }> {
     try {
-        const resp = await fetch(TLC_LATEST_URL, {
-            headers: {
-                'Accept': 'application/json',
-            },
-        });
-        if (!resp.ok) return null;
-        const data = await resp.json();
-
-        if (data.rtCode !== 0) return null;
-
-        const post = data.content?.lotteryBingoLatestPost;
-        if (!post) return null;
-
-        return {
-            period: String(post.drawTerm),
-            drawTime: post.dDate,
-            numbers: post.bigShowOrder.map((n: string) => parseInt(n, 10)),
-            superNumber: parseInt(post.prizeNum?.bullEye || '0', 10),
-        };
-    } catch {
-        return null;
-    }
-}
-
-/**
- * 從後端 API 取得最新開獎，失敗時 fallback 到台彩 API 直連
- */
-async function fetchLiveLatest(): Promise<BingoDrawData | null> {
-    // 先嘗試本地後端
-    try {
-        const resp = await fetch(`${API_BASE}/api/latest`);
+        const resp = await fetch(`${API_BASE}/api/kv/today`);
         if (resp.ok) {
             const json = await resp.json();
-            if (json.success && json.data) {
-                const d = json.data;
+            if (json.success && json.draws) {
                 return {
-                    period: String(d.drawTerm),
-                    drawTime: d.dDate,
-                    numbers: d.bigShowOrder.map((n: string) => parseInt(n, 10)),
-                    superNumber: parseInt(d.prizeNum?.bullEye || '0', 10),
+                    draws: json.draws,
+                    lastUpdated: json.lastUpdated
                 };
             }
         }
-    } catch {
-        // 後端不可用，繼續嘗試台彩 API
+    } catch (err) {
+        console.error('Failed to fetch from KV', err);
     }
-
-    // Fallback：直接呼叫台彩 API
-    return fetchFromTlcApi();
-}
-
-/**
- * 處理 TLC API 可能回傳錯誤日期格式 '0001-01-01T00:00:00' 的問題
- */
-function getValidDrawTime(dateStr: any, fallback: string): string {
-    if (!dateStr || typeof dateStr !== 'string') return fallback;
-    if (dateStr.startsWith('0001')) return fallback;
-    return dateStr;
-}
-
-/**
- * 從後端 API 取得今日歷史，失敗時 fallback 到台彩歷史 API 直連
- */
-async function fetchLiveHistory(): Promise<BingoDrawData[]> {
-    // 先嘗試本地後端
-    try {
-        const today = new Date().toISOString().slice(0, 10);
-        const resp = await fetch(`${API_BASE}/api/history?date=${today}&page=1&size=203`);
-        if (resp.ok) {
-            const json = await resp.json();
-            if (json.success && json.data?.draws && json.data.draws.length > 0) {
-                return json.data.draws.map((d: any) => ({
-                    period: String(d.drawTerm),
-                    drawTime: getValidDrawTime(d.dDate, today),
-                    numbers: (d.bigShowOrder as string[]).map((n: string) => parseInt(n, 10)),
-                    superNumber: parseInt(d.bullEyeTop || d.superNumber || '0', 10),
-                }));
-            }
-        }
-    } catch {
-        // 後端不可用
-    }
-
-    // Fallback：直接呼叫台彩歷史 API
-    return fetchHistoryFromTlcApi();
-}
-
-/**
- * 直接從台彩歷史 API 取得當天開獎資料（支援翻頁）
- */
-async function fetchHistoryFromTlcApi(): Promise<BingoDrawData[]> {
-    const allDraws: BingoDrawData[] = [];
-    const today = new Date().toISOString().slice(0, 10);
-    let page = 1;
-    const pageSize = 50;
-
-    try {
-        // 最多取 5 頁（250 期），避免無限迴圈
-        while (page <= 5) {
-            const url = `${TLC_HISTORY_URL}?openDate=${today}&pageNum=${page}&pageSize=${pageSize}`;
-            const resp = await fetch(url, {
-                headers: { 'Accept': 'application/json' },
-            });
-            if (!resp.ok) break;
-
-            const data = await resp.json();
-            if (data.rtCode !== 0) break;
-
-            const results = data.content?.bingoQueryResult;
-            if (!results || results.length === 0) break;
-
-            for (const item of results) {
-                allDraws.push({
-                    period: String(item.drawTerm),
-                    drawTime: getValidDrawTime(item.dDate, today),
-                    numbers: item.bigShowOrder.map((n: string) => parseInt(n, 10)),
-                    superNumber: parseInt(item.bullEyeTop || '0', 10),
-                });
-            }
-
-            const totalSize = data.content?.totalSize || 0;
-            if (allDraws.length >= totalSize) break;
-            page++;
-        }
-    } catch {
-        // 台彩 API 也不可用
-    }
-
-    return allDraws;
+    return { draws: [], lastUpdated: null };
 }
 
 /**
@@ -246,43 +127,41 @@ export function useBingoData(): UseBingoDataReturn {
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    /** 即時模式：從後端 API 或台彩 API 取得資料 */
+    /** 即時模式：從 Worker KV 取得資料 */
     const loadLive = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            // 同時取得最新期與今日歷史
-            const [latest, history] = await Promise.all([
-                fetchLiveLatest(),
-                fetchLiveHistory(),
-            ]);
+            const { draws: kvDraws, lastUpdated } = await fetchFromKV();
 
-            // 只要最新期取得成功就維持即時模式
-            if (!latest && history.length === 0) {
-                // 所有來源都不可用，自動降級到 CSV
-                setMode('csv');
-                setError('API 不可用，已切換至 CSV 模式');
+            if (!kvDraws || kvDraws.length === 0) {
+                setError('KV 暫無資料，等待 Worker 更新');
+                setDraws([]);
+                setRawDraws([]);
+                setCountdown(LIVE_REFRESH_INTERVAL / 1000);
                 return;
             }
 
-            // 合併：最新期 + 歷史（去重），按期數降序排列
-            const allDraws: BingoDrawData[] = [];
-            if (latest) allDraws.push(latest);
-            for (const d of history) {
-                if (!allDraws.some((existing) => existing.period === d.period)) {
-                    allDraws.push(d);
-                }
-            }
-
             // 按期數降序排列，確保最新在前
-            allDraws.sort((a, b) => Number(b.period) - Number(a.period));
+            const sortedDraws = [...kvDraws].sort((a, b) => Number(b.period) - Number(a.period));
 
-            setDraws(allDraws);
+            setDraws(sortedDraws);
             setRawDraws([]); // 即時模式下不使用 rawDraws
-            setCountdown(LIVE_REFRESH_INTERVAL / 1000);
+
+            // 精確計算倒數計時：從 lastUpdated 起算 5 分鐘
+            if (lastUpdated) {
+                const lastTime = new Date(lastUpdated).getTime();
+                const now = Date.now();
+                const diffSecs = Math.floor((now - lastTime) / 1000);
+                const remaining = Math.max((LIVE_REFRESH_INTERVAL / 1000) - diffSecs, 5); // 至少 5 秒，避免 0
+                setCountdown(remaining);
+            } else {
+                setCountdown(LIVE_REFRESH_INTERVAL / 1000);
+            }
         } catch {
-            setError('即時資料取得失敗');
-            setMode('csv');
+            setError('即時資料取得失敗 (KV 連線異常)');
+            // 保留原有 draws，讓畫面不變空白
+            setCountdown(LIVE_REFRESH_INTERVAL / 1000);
         } finally {
             setLoading(false);
         }
@@ -327,7 +206,7 @@ export function useBingoData(): UseBingoDataReturn {
             if (timerRef.current) clearInterval(timerRef.current);
             if (countdownRef.current) clearInterval(countdownRef.current);
         };
-    }, [loadData, mode]);
+    }, [mode]); // 移除 loadData 依賴，避免重複觸發
 
     const latestDraw = draws.length > 0 ? draws[0] : null;
 

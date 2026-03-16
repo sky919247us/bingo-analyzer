@@ -6,30 +6,16 @@ export default function BingoDistribution() {
     const { draws, loading, error } = useBingoData();
 
     /** 
-     * 透過實際開獎時間或期數推算精準的開獎時分
+     * KV 中已由後端提供精確 ISO 時間字串
      */
-    const getDrawTime = (draw: { period: string; drawTime: string }) => {
+    const getDrawTime = (drawTime: string) => {
+        if (!drawTime || drawTime === '0001-01-01T00:00:00') return '—';
         try {
-            // 嘗試解析 API 提供的 ISO 日期 (排除錯誤的 0001 年)
-            const d = new Date(draw.drawTime);
-            if (!isNaN(d.getTime()) && d.getFullYear() > 2000 && (d.getHours() !== 0 || d.getMinutes() !== 0 || d.getSeconds() !== 0)) {
+            const d = new Date(drawTime);
+            if (!isNaN(d.getTime())) {
                 return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
             }
         } catch {}
-        
-        // 若時間無效或為 'YYYY-MM-DD'，使用期數 (period) 推算正確時分
-        // 台灣彩券 Bingo 每日 203 期，07:05 起每 5 分鐘開獎一次
-        const periodNum = parseInt(draw.period, 10);
-        if (!isNaN(periodNum)) {
-            const dailyNum = periodNum % 1000;
-            if (dailyNum >= 1 && dailyNum <= 203) {
-                const totalMins = 7 * 60 + 5 + (dailyNum - 1) * 5;
-                const hh = Math.floor(totalMins / 60).toString().padStart(2, '0');
-                const mm = (totalMins % 60).toString().padStart(2, '0');
-                return `${hh}:${mm}`;
-            }
-        }
-        
         return "00:00";
     };
 
@@ -106,7 +92,7 @@ export default function BingoDistribution() {
                                                 color: 'var(--text-main)',
                                                 boxShadow: '2px 0 5px rgba(0,0,0,0.05)'
                                             }}>
-                                                {getDrawTime(draw)}
+                                                {getDrawTime(draw.drawTime)}
                                             </td>
                                             
                                             {/* 大小 Badge */}

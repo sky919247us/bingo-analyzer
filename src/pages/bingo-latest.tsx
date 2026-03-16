@@ -26,32 +26,7 @@ export default function BingoLatest() {
         }
     };
 
-    /**
-     * 取得指定 draw 的開獎時間
-     * 台彩歷史 API 不回傳個別期次的時間，故以最新期的已知時間為基準，
-     * 根據期數差 × 5 分鐘反推計算
-     */
-    const getDrawTime = (draw: typeof draws[0]) => {
-        // 如果 draw 本身有有效時間，直接用
-        if (draw.drawTime && draw.drawTime !== '0001-01-01T00:00:00') {
-            const dt = new Date(draw.drawTime);
-            if (!isNaN(dt.getTime()) && dt.getFullYear() > 2000) {
-                return formatDate(dt);
-            }
-        }
 
-        // 以最新期為基準反推（賓果賓果每 5 分鐘一期）
-        if (latestDraw?.drawTime && latestDraw.period) {
-            const latestDate = new Date(latestDraw.drawTime);
-            if (!isNaN(latestDate.getTime()) && latestDate.getFullYear() > 2000) {
-                const periodDiff = Number(latestDraw.period) - Number(draw.period);
-                const drawDate = new Date(latestDate.getTime() - periodDiff * 5 * 60_000);
-                return formatDate(drawDate);
-            }
-        }
-
-        return '—';
-    };
 
     return (
         <div className="animate-in">
@@ -230,7 +205,7 @@ export default function BingoLatest() {
                                                     {draw.period}
                                                 </td>
                                                 <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                                    {getDrawTime(draw)}
+                                                    {formatDrawTime(draw.drawTime)}
                                                 </td>
                                                 <td>
                                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>

@@ -126,8 +126,8 @@ export default function BingoStatistics() {
         if (draws.length === 0) return null;
         
         // 算出今日盤路統計 (統一格式比較)
-        const latestDate = draws[0].drawTime.replace(/\//g, '-').slice(0, 10);
-        const todayDraws = draws.filter(d => d.drawTime.replace(/\//g, '-').startsWith(latestDate));
+        const latestDate = draws[0].drawTime.slice(0, 10);
+        const todayDraws = draws.filter(d => d.drawTime.startsWith(latestDate));
         
         let bigToday = 0;
         let smallToday = 0;
