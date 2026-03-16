@@ -113,6 +113,15 @@ async function fetchLiveLatest(): Promise<BingoDrawData | null> {
 }
 
 /**
+ * 處理 TLC API 可能回傳錯誤日期格式 '0001-01-01T00:00:00' 的問題
+ */
+function getValidDrawTime(dateStr: any, fallback: string): string {
+    if (!dateStr || typeof dateStr !== 'string') return fallback;
+    if (dateStr.startsWith('0001')) return fallback;
+    return dateStr;
+}
+
+/**
  * 從後端 API 取得今日歷史，失敗時 fallback 到台彩歷史 API 直連
  */
 async function fetchLiveHistory(): Promise<BingoDrawData[]> {
@@ -125,7 +134,7 @@ async function fetchLiveHistory(): Promise<BingoDrawData[]> {
             if (json.success && json.data?.draws && json.data.draws.length > 0) {
                 return json.data.draws.map((d: any) => ({
                     period: String(d.drawTerm),
-                    drawTime: (d.dDate as string) || today,
+                    drawTime: getValidDrawTime(d.dDate, today),
                     numbers: (d.bigShowOrder as string[]).map((n: string) => parseInt(n, 10)),
                     superNumber: parseInt(d.bullEyeTop || d.superNumber || '0', 10),
                 }));
@@ -166,7 +175,7 @@ async function fetchHistoryFromTlcApi(): Promise<BingoDrawData[]> {
             for (const item of results) {
                 allDraws.push({
                     period: String(item.drawTerm),
-                    drawTime: item.dDate || today,
+                    drawTime: getValidDrawTime(item.dDate, today),
                     numbers: item.bigShowOrder.map((n: string) => parseInt(n, 10)),
                     superNumber: parseInt(item.bullEyeTop || '0', 10),
                 });

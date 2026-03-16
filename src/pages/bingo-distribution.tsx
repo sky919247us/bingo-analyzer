@@ -6,23 +6,28 @@ export default function BingoDistribution() {
     const { draws, loading, error } = useBingoData();
 
     /** 
-     * 透過 API 提供的實際開獎時間擷取小時與分鐘
+     * 透過實際開獎時間或期數推算精準的開獎時分
      */
     const getDrawTime = (draw: { period: string; drawTime: string }) => {
         try {
-            // 解析完整的 ISO 日期
+            // 嘗試解析 API 提供的 ISO 日期 (排除錯誤的 0001 年)
             const d = new Date(draw.drawTime);
-            if (!isNaN(d.getTime()) && (d.getHours() !== 0 || d.getMinutes() !== 0 || d.getSeconds() !== 0)) {
+            if (!isNaN(d.getTime()) && d.getFullYear() > 2000 && (d.getHours() !== 0 || d.getMinutes() !== 0 || d.getSeconds() !== 0)) {
                 return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
             }
         } catch {}
         
-        // 若無法透過 Date 正確解析或時間無效， fallback 為字串截取（適用於多數 ISO 格式 "YYYY-MM-DDTHH:mm:ss"）
-        if (draw.drawTime && draw.drawTime.length >= 16) {
-             const timeStr = draw.drawTime.substring(11, 16);
-             if (timeStr.includes(':')) {
-                 return timeStr;
-             }
+        // 若時間無效或為 'YYYY-MM-DD'，使用期數 (period) 推算正確時分
+        // 台灣彩券 Bingo 每日 203 期，07:05 起每 5 分鐘開獎一次
+        const periodNum = parseInt(draw.period, 10);
+        if (!isNaN(periodNum)) {
+            const dailyNum = periodNum % 1000;
+            if (dailyNum >= 1 && dailyNum <= 203) {
+                const totalMins = 7 * 60 + 5 + (dailyNum - 1) * 5;
+                const hh = Math.floor(totalMins / 60).toString().padStart(2, '0');
+                const mm = (totalMins % 60).toString().padStart(2, '0');
+                return `${hh}:${mm}`;
+            }
         }
         
         return "00:00";
