@@ -125,9 +125,9 @@ export default function BingoStatistics() {
     const trendData = useMemo(() => {
         if (draws.length === 0) return null;
         
-        // 算出今日盤路統計
-        const latestDate = draws[0].drawTime.slice(0, 10);
-        const todayDraws = draws.filter(d => d.drawTime.startsWith(latestDate));
+        // 算出今日盤路統計 (統一格式比較)
+        const latestDate = draws[0].drawTime.replace(/\//g, '-').slice(0, 10);
+        const todayDraws = draws.filter(d => d.drawTime.replace(/\//g, '-').startsWith(latestDate));
         
         let bigToday = 0;
         let smallToday = 0;
@@ -146,16 +146,16 @@ export default function BingoStatistics() {
             if (odd <= 7) evenToday++;
         }
 
-        let currentBigGap = 0;
-        let currentSmallGap = 0;
-        let currentOddGap = 0;
-        let currentEvenGap = 0;
+        let currentBigGap = -1;
+        let currentSmallGap = -1;
+        let currentOddGap = -1;
+        let currentEvenGap = -1;
         
         // 由新到舊計算遺漏期數
-        for (const d of draws) {
+        for (let i = 0; i < draws.length; i++) {
             let bigCount = 0;
             let oddCount = 0;
-            d.numbers.forEach(n => {
+            draws[i].numbers.forEach(n => {
                 if (n >= 41) bigCount++;
                 if (n % 2 !== 0) oddCount++;
             });
@@ -165,26 +165,21 @@ export default function BingoStatistics() {
             const isOdd = oddCount >= 13;
             const isEven = oddCount <= 7;
             
-            if (!isBig && currentBigGap !== -1) currentBigGap++;
-            if (!isSmall && currentSmallGap !== -1) currentSmallGap++;
-            if (!isOdd && currentOddGap !== -1) currentOddGap++;
-            if (!isEven && currentEvenGap !== -1) currentEvenGap++;
+            if (isBig && currentBigGap === -1) currentBigGap = i;
+            if (isSmall && currentSmallGap === -1) currentSmallGap = i;
+            if (isOdd && currentOddGap === -1) currentOddGap = i;
+            if (isEven && currentEvenGap === -1) currentEvenGap = i;
             
-            if (isBig) currentBigGap = -1;
-            if (isSmall) currentSmallGap = -1;
-            if (isOdd) currentOddGap = -1;
-            if (isEven) currentEvenGap = -1;
-            
-            if (currentBigGap < 0 && currentSmallGap < 0 && currentOddGap < 0 && currentEvenGap < 0) {
+            if (currentBigGap !== -1 && currentSmallGap !== -1 && currentOddGap !== -1 && currentEvenGap !== -1) {
                 break;
             }
         }
         
         return {
-            bigGap: Math.max(0, currentBigGap),
-            smallGap: Math.max(0, currentSmallGap),
-            oddGap: Math.max(0, currentOddGap),
-            evenGap: Math.max(0, currentEvenGap),
+            bigGap: currentBigGap === -1 ? draws.length : currentBigGap,
+            smallGap: currentSmallGap === -1 ? draws.length : currentSmallGap,
+            oddGap: currentOddGap === -1 ? draws.length : currentOddGap,
+            evenGap: currentEvenGap === -1 ? draws.length : currentEvenGap,
             bigToday,
             smallToday,
             oddToday,
