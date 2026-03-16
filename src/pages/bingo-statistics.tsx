@@ -126,9 +126,8 @@ export default function BingoStatistics() {
         if (draws.length === 0) return null;
         
         // 算出今日盤路統計
-        const last3 = parseInt(draws[0].period, 10) % 1000;
-        const todayCount = isNaN(last3) ? 203 : last3;
-        const todayDraws = draws.slice(0, Math.min(todayCount, draws.length));
+        const latestDate = draws[0].drawTime.slice(0, 10);
+        const todayDraws = draws.filter(d => d.drawTime.startsWith(latestDate));
         
         let bigToday = 0;
         let smallToday = 0;
@@ -138,13 +137,13 @@ export default function BingoStatistics() {
         for (const d of todayDraws) {
             let big = 0, odd = 0;
             d.numbers.forEach(n => {
-                if (n > 40) big++;
+                if (n >= 41) big++;
                 if (n % 2 !== 0) odd++;
             });
-            if (big > 10) bigToday++;
-            if (big < 10) smallToday++;
-            if (odd > 10) oddToday++;
-            if (odd < 10) evenToday++;
+            if (big >= 13) bigToday++;
+            if (big <= 7) smallToday++;
+            if (odd >= 13) oddToday++;
+            if (odd <= 7) evenToday++;
         }
 
         let currentBigGap = 0;
@@ -157,14 +156,14 @@ export default function BingoStatistics() {
             let bigCount = 0;
             let oddCount = 0;
             d.numbers.forEach(n => {
-                if (n > 40) bigCount++;
+                if (n >= 41) bigCount++;
                 if (n % 2 !== 0) oddCount++;
             });
             
-            const isBig = bigCount > 10;
-            const isSmall = bigCount < 10;
-            const isOdd = oddCount > 10;
-            const isEven = oddCount < 10;
+            const isBig = bigCount >= 13;
+            const isSmall = bigCount <= 7;
+            const isOdd = oddCount >= 13;
+            const isEven = oddCount <= 7;
             
             if (!isBig && currentBigGap !== -1) currentBigGap++;
             if (!isSmall && currentSmallGap !== -1) currentSmallGap++;

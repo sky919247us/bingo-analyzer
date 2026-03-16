@@ -119,7 +119,7 @@ async function fetchLiveHistory(): Promise<BingoDrawData[]> {
     // 先嘗試本地後端
     try {
         const today = new Date().toISOString().slice(0, 10);
-        const resp = await fetch(`${API_BASE}/api/history?date=${today}&page=1&size=50`);
+        const resp = await fetch(`${API_BASE}/api/history?date=${today}&page=1&size=203`);
         if (resp.ok) {
             const json = await resp.json();
             if (json.success && json.data?.draws && json.data.draws.length > 0) {
