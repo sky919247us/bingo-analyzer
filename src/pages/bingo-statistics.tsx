@@ -415,8 +415,8 @@ export default function BingoStatistics() {
                         </div>
 
                         {/* 大小單雙統計 */}
-                        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                            <div className="bs-header">大小單雙統計</div>
+                        <div className="card">
+                            <h3 className="section-title">📊 大小單雙統計</h3>
                             <div className="bs-body">
                                 <div className="bs-labels">
                                     <div className="bs-label-count">次數</div>
