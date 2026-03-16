@@ -123,7 +123,7 @@ export default function BingoStatistics() {
 
     /** 盤路走勢 (大小單雙遺漏與次數) */
     const trendData = useMemo(() => {
-        if (draws.length === 0) return null;
+        if (!draws || draws.length === 0 || !draws[0]) return null;
         
         // 算出今日盤路統計 (統一格式比較)
         const latestDate = draws[0].drawTime.slice(0, 10);
