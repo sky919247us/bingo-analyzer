@@ -19,7 +19,7 @@ const API_BASE = 'https://bingo-kv-worker.sky919247us.workers.dev';
 /** CSV 模式刷新間隔（毫秒）— 保持 60 秒 */
 const CSV_REFRESH_INTERVAL = 60_000;
 
-/** 前端提取延遲秒數：開獎後 40 秒再抓（Worker 在開獎後 25 秒寫入 KV，預留 15 秒緩衝） */
+/** 前端提取延遲秒數：Worker 用 OEHL 偵測新期後寫入 KV，前端多等 10 秒 */
 const FETCH_DELAY_SECS = 50;
 
 /**
@@ -75,6 +75,35 @@ function getSecondsUntilNextFetch(): number {
     return nextFetchSecs - currentTotalSecs;
 }
 
+/** OEHL 大小單雙統計資料結構 */
+export interface OEHLStats {
+    /** 今日累積開出次數 */
+    todayDrawSum: { odd: number; even: number; peace: number; high: number; low: number; middle: number };
+    /** 今日最高連續未開出期數 */
+    todayLostSum: { odd: number; even: number; peace: number; high: number; low: number; middle: number };
+    /** 目前連續未開出期數 */
+    lostSumNow: { odd: number; even: number; peace: number; high: number; low: number; middle: number };
+    /** 今日每期結果列表 */
+    todayResults: OEHLResult[];
+}
+
+export interface OEHLResult {
+    drawTime: string;
+    drawTerm: number;
+    odd: string;
+    oddLostNum: number;
+    even: string;
+    evenLostNum: number;
+    peace: string;
+    peaceLostNum: number;
+    high: string;
+    highLostNum: number;
+    low: string;
+    lowLostNum: number;
+    middle: string;
+    middleLostNum: number;
+}
+
 interface UseBingoDataReturn {
     draws: BingoDrawData[];
     rawDraws: DrawResult[];
@@ -103,6 +132,8 @@ interface UseBingoDataReturn {
     selectedYear: number;
     /** 可用年份清單 */
     availableYears: number[];
+    /** 大小單雙即時統計（來自台彩 OEHLStatistic API） */
+    oehlStats: OEHLStats | null;
 }
 
 /**
@@ -124,6 +155,24 @@ async function fetchFromKV(): Promise<{ draws: BingoDrawData[], lastUpdated: str
         console.error('Failed to fetch from KV', err);
     }
     return { draws: [], lastUpdated: null };
+}
+
+/**
+ * 從 Worker KV 取得 OEHL 大小單雙統計
+ */
+async function fetchOEHLFromKV(): Promise<OEHLStats | null> {
+    try {
+        const resp = await fetch(`${API_BASE}/api/kv/oehl`);
+        if (resp.ok) {
+            const json = await resp.json();
+            if (json.success && json.oehl) {
+                return json.oehl as OEHLStats;
+            }
+        }
+    } catch (err) {
+        console.error('Failed to fetch OEHL from KV', err);
+    }
+    return null;
 }
 
 /**
@@ -177,6 +226,7 @@ export function useBingoData(): UseBingoDataReturn {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [countdown, setCountdown] = useState(60);
+    const [oehlStats, setOehlStats] = useState<OEHLStats | null>(null);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -185,7 +235,11 @@ export function useBingoData(): UseBingoDataReturn {
         setLoading(true);
         setError(null);
         try {
-            const { draws: kvDraws } = await fetchFromKV();
+            const [{ draws: kvDraws }, oehl] = await Promise.all([
+                fetchFromKV(),
+                fetchOEHLFromKV(),
+            ]);
+            if (oehl) setOehlStats(oehl);
 
             if (!kvDraws || kvDraws.length === 0) {
                 setError('KV 暫無資料，等待 Worker 更新');
@@ -297,5 +351,6 @@ export function useBingoData(): UseBingoDataReturn {
         setCsvYear,
         selectedYear,
         availableYears: AVAILABLE_YEARS,
+        oehlStats,
     };
 }

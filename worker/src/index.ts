@@ -3,6 +3,9 @@ export interface Env {
 }
 
 const TLC_LATEST_URL = 'https://api.taiwanlottery.com/TLCAPIWeB/Lottery/LatestBingoResult';
+const TLC_OEHL_URL = 'https://api.taiwanlottery.com/TLCAPIWeB/Lottery/OEHLStatistic';
+
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 // 允許跨域請求的 Headers
 const corsHeaders = {
@@ -12,12 +15,10 @@ const corsHeaders = {
   'Content-Type': 'application/json;charset=UTF-8',
 };
 
+/** 從 LatestBingoResult 取得最新一期開獎號碼 */
 async function fetchLatestFromTLC(): Promise<any> {
     const resp = await fetch(TLC_LATEST_URL, {
-        headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        },
+        headers: { 'Accept': 'application/json', 'User-Agent': UA },
     });
     if (!resp.ok) throw new Error(`TLC API Error: ${resp.status}`);
     const data: any = await resp.json();
@@ -33,13 +34,25 @@ async function fetchLatestFromTLC(): Promise<any> {
     };
 }
 
+/** 從 OEHLStatistic 取得大小單雙即時統計（此 API 更新速度最快） */
+async function fetchOEHLStatistic(): Promise<any> {
+    const resp = await fetch(TLC_OEHL_URL, {
+        headers: { 'Accept': 'application/json', 'User-Agent': UA },
+    });
+    if (!resp.ok) throw new Error(`OEHL API Error: ${resp.status}`);
+    const data: any = await resp.json();
+    if (data.rtCode !== 0) throw new Error(`OEHL API rtCode: ${data.rtCode}`);
+    return data.content;
+}
+
+/** 從 BingoResult 歷史查詢 API 取得指定日期的開獎紀錄 */
 async function fetchHistoryPageFromTLC(dateStr: string, page: number = 1): Promise<{ totalSize: number, draws: any[] }> {
     const url = `https://api.taiwanlottery.com/TLCAPIWeB/Lottery/BingoResult?openDate=${dateStr}&pageNum=${page}&pageSize=50`;
-    const resp = await fetch(url, { headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } });
+    const resp = await fetch(url, { headers: { 'Accept': 'application/json', 'User-Agent': UA } });
     if (!resp.ok) throw new Error(`TLC History API Error: ${resp.status}`);
     const data: any = await resp.json();
     if (data.rtCode !== 0) throw new Error(`TLC History API rtCode: ${data.rtCode}`);
-    
+
     const contentResults = data.content?.bingoQueryResult || [];
     const draws = contentResults.map((item: any) => ({
         period: String(item.drawTerm),
@@ -47,7 +60,7 @@ async function fetchHistoryPageFromTLC(dateStr: string, page: number = 1): Promi
         numbers: item.bigShowOrder.map((n: string) => parseInt(n, 10)),
         superNumber: parseInt(item.bullEyeTop || '0', 10),
     }));
-    
+
     return {
         totalSize: data.content?.totalSize || 0,
         draws
@@ -57,13 +70,12 @@ async function fetchHistoryPageFromTLC(dateStr: string, page: number = 1): Promi
 /** 判斷 drawTime 是否為有效時間（排除 0001-01-01 等無效預設值） */
 function isValidDrawTime(drawTime: string | undefined | null): boolean {
     if (!drawTime || !drawTime.includes(':')) return false;
-    // 台彩 API 回傳無效時間為 "0001-01-01T00:00:00"，必須排除
     if (drawTime.startsWith('0001') || drawTime.startsWith('0000')) return false;
     const ts = new Date(drawTime).getTime();
-    // 排除 Unix epoch 前的時間戳
     return !isNaN(ts) && ts > 0;
 }
 
+/** 根據已知錨點推算缺失的 drawTime */
 function fillMissingTimes(draws: any[]) {
     const anchor = draws.find(d => isValidDrawTime(d.drawTime));
     if (!anchor) return draws;
@@ -99,6 +111,11 @@ export default {
             const draws = rawToday ? JSON.parse(rawToday) : [];
             return new Response(JSON.stringify({ success: true, draws, count: draws.length, lastUpdated }), { headers: corsHeaders });
         }
+        if (url.pathname === '/api/kv/oehl') {
+            const rawOehl = await env.BINGO_KV.get('oehl_stats');
+            const lastUpdated = await env.BINGO_KV.get('last_updated');
+            return new Response(JSON.stringify({ success: true, oehl: rawOehl ? JSON.parse(rawOehl) : null, lastUpdated }), { headers: corsHeaders });
+        }
         if (url.pathname === '/api/kv/force-update') {
             await syncDrawsToKV(env);
             const lastUpdated = await env.BINGO_KV.get('last_updated');
@@ -111,10 +128,10 @@ export default {
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-      // Cron 在開獎整分鐘觸發，延遲 30 秒後開始同步
-      // 若台彩 API 尚未更新，會自動重試（最多 3 次，每次間隔 10 秒）
+      // Cron 在開獎整分鐘觸發，延遲 3 秒後開始同步
+      // 用 OEHLStatistic 偵測新期（更新最快），每 10 秒重試最多 20 次
       ctx.waitUntil(
-          new Promise(resolve => setTimeout(resolve, 30_000))
+          new Promise(resolve => setTimeout(resolve, 3_000))
               .then(() => syncDrawsToKV(env))
       );
   },
@@ -122,7 +139,8 @@ export default {
 
 /**
  * 每日開獎時段：台灣時間 07:05 ~ 23:55，每 5 分鐘一期，共 203 期
- * Cron 每 5 分鐘觸發，延遲 10 秒後執行，確保台彩 API 已發佈最新獎號
+ * 偵測策略：OEHLStatistic（最快）→ LatestBingoResult → BingoResult（歷史）
+ * 重試：每 10 秒一次，最多 20 次（涵蓋 200 秒）
  */
 async function syncDrawsToKV(env: Env) {
     try {
@@ -138,11 +156,11 @@ async function syncDrawsToKV(env: Env) {
       const taipeiYear = parts.find(p => p.type === 'year')?.value;
       const taipeiMonth = parts.find(p => p.type === 'month')?.value;
       const taipeiDay = parts.find(p => p.type === 'day')?.value;
-      const taipeiTimeMinutes = taipeiHour * 60 + taipeiMinute; // 轉為當日分鐘數
+      const taipeiTimeMinutes = taipeiHour * 60 + taipeiMinute;
 
-      // 開獎時段：07:05(=425分) ~ 23:55(=1435分)，超出範圍僅做換日不抓新資料
-      const DRAW_START = 7 * 60 + 5;   // 07:05 = 425
-      const DRAW_END = 23 * 60 + 55;   // 23:55 = 1435
+      // 開獎時段：07:05(=425分) ~ 23:55(=1435分)
+      const DRAW_START = 7 * 60 + 5;
+      const DRAW_END = 23 * 60 + 55;
       const isDrawTime = taipeiTimeMinutes >= DRAW_START && taipeiTimeMinutes <= DRAW_END;
 
       // 換日邏輯：凌晨 00:00~04:59 視為前一天
@@ -164,7 +182,7 @@ async function syncDrawsToKV(env: Env) {
           await env.BINGO_KV.put('today_draws', JSON.stringify([]));
       }
 
-      // 非開獎時段（07:05 前或 23:55 後）只做換日，不抓新資料
+      // 非開獎時段只做換日，不抓新資料
       if (!isDrawTime) {
           console.log(`[syncDrawsToKV] 非開獎時段 (台灣 ${taipeiHour}:${String(taipeiMinute).padStart(2, '0')})，僅執行換日檢查`);
           await env.BINGO_KV.put('last_updated', new Date().toISOString());
@@ -178,52 +196,57 @@ async function syncDrawsToKV(env: Env) {
           : null;
       let isUpdated = false;
 
-      // 重試機制：若台彩 API 尚未更新（最新期數沒變），最多重試 3 次，每次間隔 15 秒
-      let newDraw: any = null;
-      let page1Draws: any[] = [];
-      let totalSize = 0;
-      const MAX_RETRIES = 3;
+      // === 第一階段：用 OEHLStatistic 偵測新期數（此 API 更新最快） ===
+      let oehlData: any = null;
+      let oehlLatestPeriod: string | null = null;
+      const MAX_RETRIES = 20;
       const RETRY_DELAY = 10_000;
 
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
           if (attempt > 0) {
-              console.log(`[syncDrawsToKV] 台彩 API 尚未更新，第 ${attempt} 次重試...`);
+              console.log(`[syncDrawsToKV] 等待新期數，第 ${attempt} 次重試...`);
               await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
           }
 
           try {
-              newDraw = await fetchLatestFromTLC();
+              oehlData = await fetchOEHLStatistic();
+              const results = oehlData?.todayResults || [];
+              if (results.length > 0) {
+                  oehlLatestPeriod = String(results[0].drawTerm);
+              }
           } catch (err) {
-              console.error('[syncDrawsToKV] fetchLatestFromTLC failed:', err);
-              newDraw = null;
+              console.error('[syncDrawsToKV] fetchOEHLStatistic failed:', err);
           }
 
-          const histResult = await fetchHistoryPageFromTLC(todayDateStr, 1);
-          page1Draws = histResult.draws;
-          totalSize = histResult.totalSize;
-
-          // 檢查是否有新期數
-          const latestFromAPI = newDraw?.period || null;
-          const latestFromHistory = page1Draws.length > 0
-              ? page1Draws.reduce((max, d) => Number(d.period) > Number(max.period) ? d : max).period
-              : null;
-          const newestPeriod = [latestFromAPI, latestFromHistory]
-              .filter(Boolean)
-              .reduce((a, b) => (Number(a) > Number(b) ? a : b), currentLatestPeriod || '0');
-
-          if (!currentLatestPeriod || newestPeriod !== currentLatestPeriod) {
-              console.log(`[syncDrawsToKV] 取得新期數 ${newestPeriod}（原 ${currentLatestPeriod}），第 ${attempt} 次嘗試`);
+          // 有新期數就跳出重試
+          if (oehlLatestPeriod && (!currentLatestPeriod || oehlLatestPeriod !== currentLatestPeriod)) {
+              console.log(`[syncDrawsToKV] OEHL 偵測到新期數 ${oehlLatestPeriod}（原 ${currentLatestPeriod}），第 ${attempt} 次嘗試`);
               break;
           }
 
           if (attempt === MAX_RETRIES) {
-              console.log(`[syncDrawsToKV] 重試 ${MAX_RETRIES} 次後仍無新期數，使用現有資料`);
+              console.log(`[syncDrawsToKV] 重試 ${MAX_RETRIES} 次後仍無新期數`);
           }
       }
 
+      // 儲存 OEHL 大小單雙統計到 KV
+      if (oehlData) {
+          await env.BINGO_KV.put('oehl_stats', JSON.stringify(oehlData));
+      }
+
+      // === 第二階段：取得開獎號碼（LatestBingoResult + History） ===
+      let newDraw: any = null;
+      try {
+          newDraw = await fetchLatestFromTLC();
+      } catch (err) {
+          console.error('[syncDrawsToKV] fetchLatestFromTLC failed:', err);
+      }
+
+      const { totalSize, draws: page1Draws } = await fetchHistoryPageFromTLC(todayDateStr, 1);
+
       if (page1Draws.length === 0 && !newDraw) return;
 
-      // 驗證 newDraw 屬於今日（避免日期切換初期拿到昨日最後一期）
+      // 驗證 newDraw 屬於今日
       if (newDraw && isValidDrawTime(newDraw.drawTime)) {
           const drawDateStr = new Intl.DateTimeFormat('en-CA', {
               timeZone: 'Asia/Taipei',
@@ -239,7 +262,7 @@ async function syncDrawsToKV(env: Env) {
           todayDraws.unshift(newDraw);
           isUpdated = true;
       }
-      
+
       if (todayDraws.length < totalSize) {
           let allFetched = [...page1Draws];
           if (newDraw) allFetched.push(newDraw);
@@ -267,7 +290,7 @@ async function syncDrawsToKV(env: Env) {
           await env.BINGO_KV.put('latest_draw', JSON.stringify(todayDraws[0]));
       }
       await env.BINGO_KV.put('last_updated', new Date().toISOString());
-      console.log(`[syncDrawsToKV] 同步完成，日期=${todayDateStr}，筆數=${todayDraws.length}，已更新=${isUpdated}`);
+      console.log(`[syncDrawsToKV] 同步完成，日期=${todayDateStr}，筆數=${todayDraws.length}，已更新=${isUpdated}，OEHL最新=${oehlLatestPeriod}`);
     } catch (err) {
       console.error('[syncDrawsToKV] 同步失敗:', err);
     }

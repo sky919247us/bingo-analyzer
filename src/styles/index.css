@@ -1474,3 +1474,74 @@ select.form-input {
   background: #FEE2E2;
   font-weight: 900;
 }
+
+/* === OEHL 即時統計表格 === */
+.oehl-table,
+.oehl-result-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: center;
+}
+.oehl-table th,
+.oehl-table td,
+.oehl-result-table th,
+.oehl-result-table td {
+  padding: 8px 10px;
+  border: 1px solid var(--border-light, #e2e8f0);
+}
+.oehl-table thead th,
+.oehl-result-table thead th {
+  background: #007979;
+  color: #fff;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.oehl-header-group {
+  background: #005f5f !important;
+  letter-spacing: 2px;
+}
+.oehl-table tbody tr:nth-child(even),
+.oehl-result-table tbody tr:nth-child(even) {
+  background: rgba(0, 121, 121, 0.04);
+}
+.oehl-label {
+  text-align: left;
+  font-weight: 600;
+  background: #fff9db;
+  white-space: nowrap;
+}
+.oehl-val-bold {
+  font-weight: 700;
+  font-size: 1rem;
+}
+.oehl-val-danger {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: #dc2626;
+}
+.oehl-highlight-row {
+  background: #fef2f2 !important;
+}
+.oehl-highlight-row td {
+  background: #fef2f2 !important;
+}
+/* 開中顏色 */
+.oehl-hit {
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+.oehl-hit.oehl-odd { background: #007979; color: #fff; }
+.oehl-hit.oehl-even { background: #007979; color: #fff; }
+.oehl-hit.oehl-high { background: #efdd00; color: #333; font-weight: 800; }
+.oehl-hit.oehl-low { background: #efdd00; color: #333; font-weight: 800; }
+.oehl-hit.oehl-peace { background: #007979; color: #fff; }
+/* 時間與期數欄 */
+.oehl-time { white-space: nowrap; font-size: 0.8rem; color: #555; }
+.oehl-period { font-weight: 600; font-size: 0.8rem; }
+/* thead 中的子標題顏色 */
+th.oehl-odd, th.oehl-even { background: #007979 !important; }
+th.oehl-high, th.oehl-low { background: #c5b400 !important; color: #333 !important; }
+th.oehl-peace { background: #005f5f !important; }

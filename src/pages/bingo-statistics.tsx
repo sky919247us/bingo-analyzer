@@ -15,7 +15,7 @@ type FilterMode = 'all' | 'hot20' | 'cold20';
 
 export default function BingoStatistics() {
     useSeo({ title: '統計分析與走勢圖', description: '深度分析賓果賓果大小單雙盤路走勢、冷熱門獎號與雙贏拖號演算法。', keywords: '賓果統計資料, 賓果走勢' });
-    const { draws, loading, countdown } = useBingoData();
+    const { draws, loading, countdown, oehlStats } = useBingoData();
     const [filter, setFilter] = useState<FilterMode>('all');
 
     /** 計算 1-80 號碼頻率 */
@@ -119,73 +119,6 @@ export default function BingoStatistics() {
             .map(([num, count]) => ({ number: parseInt(num), count }))
             .sort((a, b) => b.count - a.count)
             .slice(0, 10);
-    }, [draws]);
-
-    /** 盤路走勢 (大小單雙遺漏與次數) */
-    const trendData = useMemo(() => {
-        if (!draws || draws.length === 0 || !draws[0]) return null;
-        
-        // 算出今日盤路統計 (統一格式比較)
-        const latestDate = draws[0].drawTime.slice(0, 10);
-        const todayDraws = draws.filter(d => d.drawTime.startsWith(latestDate));
-        
-        let bigToday = 0;
-        let smallToday = 0;
-        let oddToday = 0;
-        let evenToday = 0;
-
-        for (const d of todayDraws) {
-            let big = 0, odd = 0;
-            d.numbers.forEach(n => {
-                if (n >= 41) big++;
-                if (n % 2 !== 0) odd++;
-            });
-            if (big >= 13) bigToday++;
-            if (big <= 7) smallToday++;
-            if (odd >= 13) oddToday++;
-            if (odd <= 7) evenToday++;
-        }
-
-        let currentBigGap = -1;
-        let currentSmallGap = -1;
-        let currentOddGap = -1;
-        let currentEvenGap = -1;
-        
-        // 由新到舊計算遺漏期數
-        for (let i = 0; i < draws.length; i++) {
-            let bigCount = 0;
-            let oddCount = 0;
-            draws[i].numbers.forEach(n => {
-                if (n >= 41) bigCount++;
-                if (n % 2 !== 0) oddCount++;
-            });
-            
-            const isBig = bigCount >= 13;
-            const isSmall = bigCount <= 7;
-            const isOdd = oddCount >= 13;
-            const isEven = oddCount <= 7;
-            
-            if (isBig && currentBigGap === -1) currentBigGap = i;
-            if (isSmall && currentSmallGap === -1) currentSmallGap = i;
-            if (isOdd && currentOddGap === -1) currentOddGap = i;
-            if (isEven && currentEvenGap === -1) currentEvenGap = i;
-            
-            if (currentBigGap !== -1 && currentSmallGap !== -1 && currentOddGap !== -1 && currentEvenGap !== -1) {
-                break;
-            }
-        }
-        
-        return {
-            bigGap: currentBigGap === -1 ? draws.length : currentBigGap,
-            smallGap: currentSmallGap === -1 ? draws.length : currentSmallGap,
-            oddGap: currentOddGap === -1 ? draws.length : currentOddGap,
-            evenGap: currentEvenGap === -1 ? draws.length : currentEvenGap,
-            bigToday,
-            smallToday,
-            oddToday,
-            evenToday,
-            totalToday: todayDraws.length
-        };
     }, [draws]);
 
     /** 拖號分析 (Associated Numbers)：找出最常一起開出的雙號碼組合 (前 5 名) */
@@ -408,39 +341,73 @@ export default function BingoStatistics() {
                             </div>
                         </div>
 
-                        {/* 大小單雙統計 */}
+                        {/* 大小單雙統計（官方 OEHL 數據） */}
                         <div className="card">
-                            <h3 className="section-title">📊 大小單雙統計</h3>
-                            <div className="bs-body">
-                                <div className="bs-labels">
-                                    <div className="bs-label-count">次數</div>
-                                    <div className="bs-label-gap">未開</div>
+                            <h3 className="section-title">📊 即時獎號統計（官方）</h3>
+                            {oehlStats ? (
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table className="oehl-table">
+                                        <thead>
+                                            <tr>
+                                                <th rowSpan={2}></th>
+                                                <th colSpan={3} className="oehl-header-group">猜單雙</th>
+                                                <th colSpan={3} className="oehl-header-group">猜大小</th>
+                                            </tr>
+                                            <tr>
+                                                <th className="oehl-odd">單</th>
+                                                <th className="oehl-peace">和</th>
+                                                <th className="oehl-even">雙</th>
+                                                <th className="oehl-high">大</th>
+                                                <th className="oehl-peace">和</th>
+                                                <th className="oehl-low">小</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td className="oehl-label">單注獎金</td>
+                                                <td>$150</td><td>-</td><td>$150</td>
+                                                <td>$150</td><td>-</td><td>$150</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="oehl-label">開出機率理論值</td>
+                                                <td>9.8%</td><td>80.4%</td><td>9.8%</td>
+                                                <td>9.8%</td><td>80.4%</td><td>9.8%</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="oehl-label">本日累積開出次數</td>
+                                                <td className="oehl-val-bold">{oehlStats.todayDrawSum.odd}</td>
+                                                <td className="oehl-val-bold">{oehlStats.todayDrawSum.peace}</td>
+                                                <td className="oehl-val-bold">{oehlStats.todayDrawSum.even}</td>
+                                                <td className="oehl-val-bold">{oehlStats.todayDrawSum.high}</td>
+                                                <td className="oehl-val-bold">{oehlStats.todayDrawSum.middle}</td>
+                                                <td className="oehl-val-bold">{oehlStats.todayDrawSum.low}</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="oehl-label">本日最高連損期數</td>
+                                                <td className="oehl-val-bold">{oehlStats.todayLostSum.odd}</td>
+                                                <td className="oehl-val-bold">{oehlStats.todayLostSum.peace}</td>
+                                                <td className="oehl-val-bold">{oehlStats.todayLostSum.even}</td>
+                                                <td className="oehl-val-bold">{oehlStats.todayLostSum.high}</td>
+                                                <td className="oehl-val-bold">{oehlStats.todayLostSum.middle}</td>
+                                                <td className="oehl-val-bold">{oehlStats.todayLostSum.low}</td>
+                                            </tr>
+                                            <tr className="oehl-highlight-row">
+                                                <td className="oehl-label">目前連損期數</td>
+                                                <td className="oehl-val-danger">{oehlStats.lostSumNow.odd}</td>
+                                                <td className="oehl-val-danger">{oehlStats.lostSumNow.peace}</td>
+                                                <td className="oehl-val-danger">{oehlStats.lostSumNow.even}</td>
+                                                <td className="oehl-val-danger">{oehlStats.lostSumNow.high}</td>
+                                                <td className="oehl-val-danger">{oehlStats.lostSumNow.middle}</td>
+                                                <td className="oehl-val-danger">{oehlStats.lostSumNow.low}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
-                                {trendData && (
-                                    <>
-                                        <div className="bs-row blue">
-                                            <div className="bs-icon blue">大</div>
-                                            <div className="bs-value">{trendData.bigToday}</div>
-                                            <div className="bs-value gap">{trendData.bigGap}</div>
-                                        </div>
-                                        <div className="bs-row green">
-                                            <div className="bs-icon green">小</div>
-                                            <div className="bs-value">{trendData.smallToday}</div>
-                                            <div className="bs-value gap">{trendData.smallGap}</div>
-                                        </div>
-                                        <div className="bs-row dark">
-                                            <div className="bs-icon dark">單</div>
-                                            <div className="bs-value">{trendData.oddToday}</div>
-                                            <div className="bs-value gap">{trendData.oddGap}</div>
-                                        </div>
-                                        <div className="bs-row pink">
-                                            <div className="bs-icon pink">雙</div>
-                                            <div className="bs-value">{trendData.evenToday}</div>
-                                            <div className="bs-value gap">{trendData.evenGap}</div>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
+                            ) : (
+                                <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>
+                                    等待官方數據載入...
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -509,6 +476,56 @@ export default function BingoStatistics() {
                             })}
                         </div>
                     </div>
+
+                    {/* OEHL 開獎結果明細表 */}
+                    {oehlStats && oehlStats.todayResults.length > 0 && (
+                        <div className="card" style={{ marginBottom: 20 }}>
+                            <h3 className="section-title">📋 大小單雙開獎結果</h3>
+                            <div style={{ overflowX: 'auto', maxHeight: 500, overflowY: 'auto' }}>
+                                <table className="oehl-result-table">
+                                    <thead>
+                                        <tr>
+                                            <th rowSpan={2}>開獎時間</th>
+                                            <th rowSpan={2}>期別</th>
+                                            <th colSpan={3} className="oehl-header-group">猜單雙</th>
+                                            <th colSpan={3} className="oehl-header-group">猜大小</th>
+                                        </tr>
+                                        <tr>
+                                            <th className="oehl-odd">單</th>
+                                            <th className="oehl-peace">—</th>
+                                            <th className="oehl-even">雙</th>
+                                            <th className="oehl-high">大</th>
+                                            <th className="oehl-peace">—</th>
+                                            <th className="oehl-low">小</th>
+                                        </tr>
+                                        <tr className="oehl-highlight-row">
+                                            <td colSpan={2} className="oehl-label" style={{ color: 'var(--danger)', fontWeight: 700 }}>目前連損期數</td>
+                                            <td className="oehl-val-danger">{oehlStats.lostSumNow.odd}</td>
+                                            <td className="oehl-val-danger">{oehlStats.lostSumNow.peace}</td>
+                                            <td className="oehl-val-danger">{oehlStats.lostSumNow.even}</td>
+                                            <td className="oehl-val-danger">{oehlStats.lostSumNow.high}</td>
+                                            <td className="oehl-val-danger">{oehlStats.lostSumNow.middle}</td>
+                                            <td className="oehl-val-danger">{oehlStats.lostSumNow.low}</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {oehlStats.todayResults.map((r) => (
+                                            <tr key={r.drawTerm}>
+                                                <td className="oehl-time">{r.drawTime.replace(/^\d{4}-\d{2}-\d{2}\s*/, '')}</td>
+                                                <td className="oehl-period">{r.drawTerm}</td>
+                                                <td className={r.odd ? 'oehl-hit oehl-odd' : ''}>{r.odd || r.oddLostNum}</td>
+                                                <td className={r.peace && r.peace !== '和' ? '' : (r.peace === '和' ? 'oehl-hit oehl-peace' : '')}>{r.peace === '和' ? '和' : r.peaceLostNum}</td>
+                                                <td className={r.even ? 'oehl-hit oehl-even' : ''}>{r.even || r.evenLostNum}</td>
+                                                <td className={r.high ? 'oehl-hit oehl-high' : ''}>{r.high || r.highLostNum}</td>
+                                                <td className={r.middle && r.middle !== '—' ? 'oehl-hit oehl-peace' : ''}>{r.middle && r.middle !== '—' ? '—' : r.middleLostNum}</td>
+                                                <td className={r.low ? 'oehl-hit oehl-low' : ''}>{r.low || r.lowLostNum}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="grid grid-2">
                         {/* 尾數分佈統計 */}
