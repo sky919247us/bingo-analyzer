@@ -19,8 +19,8 @@ const API_BASE = 'https://bingo-kv-worker.sky919247us.workers.dev';
 /** CSV 模式刷新間隔（毫秒）— 保持 60 秒 */
 const CSV_REFRESH_INTERVAL = 60_000;
 
-/** 前端提取延遲秒數：開獎後 10 秒再抓（等 Worker 延遲 5 秒抓取 + KV 寫入完成） */
-const FETCH_DELAY_SECS = 10;
+/** 前端提取延遲秒數：開獎後 30 秒再抓（Worker 在開獎後 10 秒寫入 KV，預留 20 秒緩衝） */
+const FETCH_DELAY_SECS = 30;
 
 /**
  * 取得台灣時間的時、分、秒
@@ -42,7 +42,7 @@ function getTaipeiTime(): { hours: number; minutes: number; seconds: number } {
 /**
  * 計算距離下一次提取的秒數
  * 開獎時段：台灣時間 07:05 ~ 23:55（每日 203 期，每 5 分鐘一期）
- * 提取時間點：07:05:10, 07:10:10, 07:15:10, ..., 23:55:10
+ * 提取時間點：07:05:30, 07:10:30, 07:15:30, ..., 23:55:30
  */
 function getSecondsUntilNextFetch(): number {
     const { hours, minutes, seconds } = getTaipeiTime();

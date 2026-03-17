@@ -111,10 +111,10 @@ export default {
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-      // Cron 在整分鐘觸發，延遲 5 秒確保台彩 API 已更新最新獎號
-      // 模擬 07:05:01, 07:10:01, ..., 23:55:01 的提取時間點
+      // Cron 在開獎整分鐘觸發，延遲 10 秒確保台彩 API 已更新最新獎號
+      // 實際抓取時間：07:05:10, 07:10:10, ..., 23:55:10
       ctx.waitUntil(
-          new Promise(resolve => setTimeout(resolve, 5000))
+          new Promise(resolve => setTimeout(resolve, 10_000))
               .then(() => syncDrawsToKV(env))
       );
   },
@@ -122,7 +122,7 @@ export default {
 
 /**
  * 每日開獎時段：台灣時間 07:05 ~ 23:55，每 5 分鐘一期，共 203 期
- * Cron 每 5 分鐘觸發一次，延遲 5 秒後執行（確保台彩 API 已更新）
+ * Cron 每 5 分鐘觸發，延遲 10 秒後執行，確保台彩 API 已發佈最新獎號
  */
 async function syncDrawsToKV(env: Env) {
     try {
