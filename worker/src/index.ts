@@ -260,14 +260,37 @@ async function syncDrawsToKV(env: Env, skipRetry: boolean = false) {
       }
 
       // === 第二階段：取得開獎號碼（LatestBingoResult + History） ===
+      // 如果 OEHL 偵測到新期數，持續重試直到 LatestBingoResult 也更新
       let newDraw: any = null;
-      try {
-          newDraw = await fetchLatestFromTLC();
-      } catch (err) {
-          console.error('[syncDrawsToKV] fetchLatestFromTLC failed:', err);
-      }
+      let page1Draws: any[] = [];
+      let totalSize = 0;
+      const targetPeriod = oehlLatestPeriod; // OEHL 偵測到的最新期數
 
-      const { totalSize, draws: page1Draws } = await fetchHistoryPageFromTLC(todayDateStr, 1);
+      for (let attempt = 0; attempt <= (skipRetry ? 0 : 12); attempt++) {
+          if (attempt > 0) {
+              console.log(`[syncDrawsToKV] 等待 LatestBingoResult 更新到 ${targetPeriod}，第 ${attempt} 次重試...`);
+              await new Promise(resolve => setTimeout(resolve, 10_000));
+          }
+
+          try {
+              newDraw = await fetchLatestFromTLC();
+          } catch (err) {
+              console.error('[syncDrawsToKV] fetchLatestFromTLC failed:', err);
+              newDraw = null;
+          }
+
+          const histResult = await fetchHistoryPageFromTLC(todayDateStr, 1);
+          page1Draws = histResult.draws;
+          totalSize = histResult.totalSize;
+
+          // 檢查是否已取得目標期數的號碼
+          const hasTarget = (newDraw && newDraw.period === targetPeriod) ||
+              page1Draws.some(d => d.period === targetPeriod);
+          if (hasTarget || !targetPeriod) {
+              if (hasTarget) console.log(`[syncDrawsToKV] 已取得期數 ${targetPeriod} 的開獎號碼`);
+              break;
+          }
+      }
 
       if (page1Draws.length === 0 && !newDraw) return;
 
