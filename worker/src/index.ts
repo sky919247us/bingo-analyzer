@@ -294,12 +294,10 @@ async function syncDrawsToKV(env: Env, skipRetry: boolean = false) {
 
       if (page1Draws.length === 0 && !newDraw) return;
 
-      // 驗證 newDraw 屬於今日
+      // 驗證 newDraw 屬於今日（直接從字串擷取日期，不用 new Date 避免時區問題）
       if (newDraw && isValidDrawTime(newDraw.drawTime)) {
-          const drawDateStr = new Intl.DateTimeFormat('en-CA', {
-              timeZone: 'Asia/Taipei',
-              year: 'numeric', month: '2-digit', day: '2-digit',
-          }).format(new Date(newDraw.drawTime));
+          const dateMatch = newDraw.drawTime.match(/(\d{4}-\d{2}-\d{2})/);
+          const drawDateStr = dateMatch ? dateMatch[1] : '';
           if (drawDateStr !== todayDateStr) {
               console.log(`[syncDrawsToKV] newDraw 日期 ${drawDateStr} ≠ 今日 ${todayDateStr}，捨棄`);
               newDraw = null;
