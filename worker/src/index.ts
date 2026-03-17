@@ -111,10 +111,10 @@ export default {
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-      // Cron 在開獎整分鐘觸發，延遲 10 秒確保台彩 API 已更新最新獎號
-      // 實際抓取時間：07:05:10, 07:10:10, ..., 23:55:10
+      // Cron 在開獎整分鐘觸發，延遲 30 秒後開始同步
+      // 若台彩 API 尚未更新，會自動重試（最多 3 次，每次間隔 10 秒）
       ctx.waitUntil(
-          new Promise(resolve => setTimeout(resolve, 10_000))
+          new Promise(resolve => setTimeout(resolve, 30_000))
               .then(() => syncDrawsToKV(env))
       );
   },
@@ -171,19 +171,69 @@ async function syncDrawsToKV(env: Env) {
           return;
       }
 
-      let newDraw: any = null;
-      try {
-          newDraw = await fetchLatestFromTLC();
-      } catch (err) {
-          console.error('[syncDrawsToKV] fetchLatestFromTLC failed:', err);
-      }
-
-      const { totalSize, draws: page1Draws } = await fetchHistoryPageFromTLC(todayDateStr, 1);
-      if (page1Draws.length === 0 && !newDraw) return;
-
       const rawToday = await env.BINGO_KV.get('today_draws');
       let todayDraws: any[] = rawToday ? JSON.parse(rawToday) : [];
+      const currentLatestPeriod = todayDraws.length > 0
+          ? todayDraws.reduce((max, d) => Number(d.period) > Number(max.period) ? d : max).period
+          : null;
       let isUpdated = false;
+
+      // 重試機制：若台彩 API 尚未更新（最新期數沒變），最多重試 3 次，每次間隔 15 秒
+      let newDraw: any = null;
+      let page1Draws: any[] = [];
+      let totalSize = 0;
+      const MAX_RETRIES = 3;
+      const RETRY_DELAY = 10_000;
+
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+          if (attempt > 0) {
+              console.log(`[syncDrawsToKV] 台彩 API 尚未更新，第 ${attempt} 次重試...`);
+              await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+          }
+
+          try {
+              newDraw = await fetchLatestFromTLC();
+          } catch (err) {
+              console.error('[syncDrawsToKV] fetchLatestFromTLC failed:', err);
+              newDraw = null;
+          }
+
+          const histResult = await fetchHistoryPageFromTLC(todayDateStr, 1);
+          page1Draws = histResult.draws;
+          totalSize = histResult.totalSize;
+
+          // 檢查是否有新期數
+          const latestFromAPI = newDraw?.period || null;
+          const latestFromHistory = page1Draws.length > 0
+              ? page1Draws.reduce((max, d) => Number(d.period) > Number(max.period) ? d : max).period
+              : null;
+          const newestPeriod = [latestFromAPI, latestFromHistory]
+              .filter(Boolean)
+              .reduce((a, b) => (Number(a) > Number(b) ? a : b), currentLatestPeriod || '0');
+
+          if (!currentLatestPeriod || newestPeriod !== currentLatestPeriod) {
+              console.log(`[syncDrawsToKV] 取得新期數 ${newestPeriod}（原 ${currentLatestPeriod}），第 ${attempt} 次嘗試`);
+              break;
+          }
+
+          if (attempt === MAX_RETRIES) {
+              console.log(`[syncDrawsToKV] 重試 ${MAX_RETRIES} 次後仍無新期數，使用現有資料`);
+          }
+      }
+
+      if (page1Draws.length === 0 && !newDraw) return;
+
+      // 驗證 newDraw 屬於今日（避免日期切換初期拿到昨日最後一期）
+      if (newDraw && isValidDrawTime(newDraw.drawTime)) {
+          const drawDateStr = new Intl.DateTimeFormat('en-CA', {
+              timeZone: 'Asia/Taipei',
+              year: 'numeric', month: '2-digit', day: '2-digit',
+          }).format(new Date(newDraw.drawTime));
+          if (drawDateStr !== todayDateStr) {
+              console.log(`[syncDrawsToKV] newDraw 日期 ${drawDateStr} ≠ 今日 ${todayDateStr}，捨棄`);
+              newDraw = null;
+          }
+      }
 
       if (newDraw && !todayDraws.some(d => d.period === newDraw.period)) {
           todayDraws.unshift(newDraw);

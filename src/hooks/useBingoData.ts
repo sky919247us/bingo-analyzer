@@ -19,8 +19,8 @@ const API_BASE = 'https://bingo-kv-worker.sky919247us.workers.dev';
 /** CSV 模式刷新間隔（毫秒）— 保持 60 秒 */
 const CSV_REFRESH_INTERVAL = 60_000;
 
-/** 前端提取延遲秒數：開獎後 30 秒再抓（Worker 在開獎後 10 秒寫入 KV，預留 20 秒緩衝） */
-const FETCH_DELAY_SECS = 30;
+/** 前端提取延遲秒數：開獎後 40 秒再抓（Worker 在開獎後 25 秒寫入 KV，預留 15 秒緩衝） */
+const FETCH_DELAY_SECS = 50;
 
 /**
  * 取得台灣時間的時、分、秒
@@ -49,8 +49,8 @@ function getSecondsUntilNextFetch(): number {
     const currentTotalSecs = hours * 3600 + minutes * 60 + seconds;
 
     // 第一個提取點 07:05:10，最後一個 23:55:10，間隔 300 秒
-    const FIRST_FETCH = (7 * 60 + 5) * 60 + FETCH_DELAY_SECS;  // 07:05:10 = 25510s
-    const LAST_FETCH = (23 * 60 + 55) * 60 + FETCH_DELAY_SECS; // 23:55:10 = 86110s
+    const FIRST_FETCH = (7 * 60 + 5) * 60 + FETCH_DELAY_SECS;  // 07:05:40 = 25540s
+    const LAST_FETCH = (23 * 60 + 55) * 60 + FETCH_DELAY_SECS; // 23:55:40 = 86140s
     const INTERVAL = 5 * 60; // 300s
 
     // 還沒到第一期 → 等到 07:05:10
