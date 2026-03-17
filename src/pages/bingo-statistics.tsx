@@ -308,107 +308,107 @@ export default function BingoStatistics() {
                         </div>
                     </div>
 
-                    <div className="grid grid-2" style={{ marginBottom: 20 }}>
-                        {/* 超級獎號分析 */}
-                        <div className="glass-card">
-                            <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span className="bingo-ball super" style={{ width: 24, height: 24, fontSize: '0.8rem' }}>S</span> 
-                                超級獎號分析
-                            </h3>
-                            <div className="stat-super-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                                <div>
-                                    <h4 style={{ fontSize: '0.9rem', color: 'var(--success)', marginBottom: 8 }}>🔥 熱門超級獎號</h4>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                                        {superData.hottest.map((d) => (
-                                            <div key={d.number} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--bg-page)', padding: '4px 8px', borderRadius: 'var(--radius-sm)' }}>
-                                                <div className="bingo-ball super" style={{ width: 28, height: 28, fontSize: '0.85rem' }}>{d.number}</div>
-                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{d.count}次</span>
-                                            </div>
-                                        ))}
-                                    </div>
+                    {/* 超級獎號分析 — 獨立一行，熱門/冷門橫排各一列 */}
+                    <div className="glass-card" style={{ marginBottom: 20 }}>
+                        <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span className="bingo-ball super" style={{ width: 24, height: 24, fontSize: '0.8rem' }}>S</span>
+                            超級獎號分析
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                            {/* 第一行：熱門 */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                                <h4 style={{ fontSize: '0.9rem', color: 'var(--success)', margin: 0, whiteSpace: 'nowrap' }}>🔥 熱門</h4>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                                    {superData.hottest.map((d) => (
+                                        <div key={d.number} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-page)', padding: '6px 12px', borderRadius: 'var(--radius-sm)' }}>
+                                            <div className="bingo-ball super" style={{ width: 30, height: 30, fontSize: '0.9rem' }}>{d.number}</div>
+                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{d.count}次</span>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div>
-                                    <h4 style={{ fontSize: '0.9rem', color: 'var(--danger)', marginBottom: 8 }}>🧊 冷門超級獎號</h4>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                                        {superData.coldest.map((d) => (
-                                            <div key={d.number} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--bg-page)', padding: '4px 8px', borderRadius: 'var(--radius-sm)' }}>
-                                                <div className="bingo-ball" style={{ width: 28, height: 28, fontSize: '0.85rem', filter: 'grayscale(1)' }}>{d.number}</div>
-                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{d.count}次</span>
-                                            </div>
-                                        ))}
-                                    </div>
+                            </div>
+                            {/* 第二行：冷門 */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                                <h4 style={{ fontSize: '0.9rem', color: 'var(--danger)', margin: 0, whiteSpace: 'nowrap' }}>🧊 冷門</h4>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                                    {superData.coldest.map((d) => (
+                                        <div key={d.number} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-page)', padding: '6px 12px', borderRadius: 'var(--radius-sm)' }}>
+                                            <div className="bingo-ball" style={{ width: 30, height: 30, fontSize: '0.9rem', filter: 'grayscale(1)' }}>{d.number}</div>
+                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{d.count}次</span>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        {/* 大小單雙統計（官方 OEHL 數據） */}
-                        <div className="card">
-                            <h3 className="section-title">📊 即時獎號統計（官方）</h3>
-                            {oehlStats ? (
-                                <div style={{ overflowX: 'auto' }}>
-                                    <table className="oehl-table">
-                                        <thead>
-                                            <tr>
-                                                <th rowSpan={2}></th>
-                                                <th colSpan={3} className="oehl-header-group">猜單雙</th>
-                                                <th colSpan={3} className="oehl-header-group">猜大小</th>
-                                            </tr>
-                                            <tr>
-                                                <th className="oehl-odd">單</th>
-                                                <th className="oehl-peace">和</th>
-                                                <th className="oehl-even">雙</th>
-                                                <th className="oehl-high">大</th>
-                                                <th className="oehl-peace">和</th>
-                                                <th className="oehl-low">小</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td className="oehl-label">單注獎金</td>
-                                                <td>$150</td><td>-</td><td>$150</td>
-                                                <td>$150</td><td>-</td><td>$150</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="oehl-label">開出機率理論值</td>
-                                                <td>9.8%</td><td>80.4%</td><td>9.8%</td>
-                                                <td>9.8%</td><td>80.4%</td><td>9.8%</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="oehl-label">本日累積開出次數</td>
-                                                <td className="oehl-val-bold">{oehlStats.todayDrawSum.odd}</td>
-                                                <td className="oehl-val-bold">{oehlStats.todayDrawSum.peace}</td>
-                                                <td className="oehl-val-bold">{oehlStats.todayDrawSum.even}</td>
-                                                <td className="oehl-val-bold">{oehlStats.todayDrawSum.high}</td>
-                                                <td className="oehl-val-bold">{oehlStats.todayDrawSum.middle}</td>
-                                                <td className="oehl-val-bold">{oehlStats.todayDrawSum.low}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="oehl-label">本日最高連損期數</td>
-                                                <td className="oehl-val-bold">{oehlStats.todayLostSum.odd}</td>
-                                                <td className="oehl-val-bold">{oehlStats.todayLostSum.peace}</td>
-                                                <td className="oehl-val-bold">{oehlStats.todayLostSum.even}</td>
-                                                <td className="oehl-val-bold">{oehlStats.todayLostSum.high}</td>
-                                                <td className="oehl-val-bold">{oehlStats.todayLostSum.middle}</td>
-                                                <td className="oehl-val-bold">{oehlStats.todayLostSum.low}</td>
-                                            </tr>
-                                            <tr className="oehl-highlight-row">
-                                                <td className="oehl-label">目前連損期數</td>
-                                                <td className="oehl-val-danger">{oehlStats.lostSumNow.odd}</td>
-                                                <td className="oehl-val-danger">{oehlStats.lostSumNow.peace}</td>
-                                                <td className="oehl-val-danger">{oehlStats.lostSumNow.even}</td>
-                                                <td className="oehl-val-danger">{oehlStats.lostSumNow.high}</td>
-                                                <td className="oehl-val-danger">{oehlStats.lostSumNow.middle}</td>
-                                                <td className="oehl-val-danger">{oehlStats.lostSumNow.low}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : (
-                                <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>
-                                    等待官方數據載入...
-                                </div>
-                            )}
-                        </div>
+                    {/* 大小單雙統計（官方 OEHL 數據）— 獨立一行 */}
+                    <div className="card" style={{ marginBottom: 20 }}>
+                        <h3 className="section-title">📊 即時獎號統計（官方）</h3>
+                        {oehlStats ? (
+                            <div style={{ overflowX: 'auto' }}>
+                                <table className="oehl-table">
+                                    <thead>
+                                        <tr>
+                                            <th rowSpan={2}></th>
+                                            <th colSpan={3} className="oehl-header-group">猜單雙</th>
+                                            <th colSpan={3} className="oehl-header-group">猜大小</th>
+                                        </tr>
+                                        <tr>
+                                            <th className="oehl-odd">單</th>
+                                            <th className="oehl-peace">和</th>
+                                            <th className="oehl-even">雙</th>
+                                            <th className="oehl-high">大</th>
+                                            <th className="oehl-peace">和</th>
+                                            <th className="oehl-low">小</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td className="oehl-label">單注獎金</td>
+                                            <td>$150</td><td>-</td><td>$150</td>
+                                            <td>$150</td><td>-</td><td>$150</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="oehl-label">開出機率理論值</td>
+                                            <td>9.8%</td><td>80.4%</td><td>9.8%</td>
+                                            <td>9.8%</td><td>80.4%</td><td>9.8%</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="oehl-label">本日累積開出次數</td>
+                                            <td className="oehl-val-bold">{oehlStats.todayDrawSum.odd}</td>
+                                            <td className="oehl-val-bold">{oehlStats.todayDrawSum.peace}</td>
+                                            <td className="oehl-val-bold">{oehlStats.todayDrawSum.even}</td>
+                                            <td className="oehl-val-bold">{oehlStats.todayDrawSum.high}</td>
+                                            <td className="oehl-val-bold">{oehlStats.todayDrawSum.middle}</td>
+                                            <td className="oehl-val-bold">{oehlStats.todayDrawSum.low}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="oehl-label">本日最高連損期數</td>
+                                            <td className="oehl-val-bold">{oehlStats.todayLostSum.odd}</td>
+                                            <td className="oehl-val-bold">{oehlStats.todayLostSum.peace}</td>
+                                            <td className="oehl-val-bold">{oehlStats.todayLostSum.even}</td>
+                                            <td className="oehl-val-bold">{oehlStats.todayLostSum.high}</td>
+                                            <td className="oehl-val-bold">{oehlStats.todayLostSum.middle}</td>
+                                            <td className="oehl-val-bold">{oehlStats.todayLostSum.low}</td>
+                                        </tr>
+                                        <tr className="oehl-highlight-row">
+                                            <td className="oehl-label">目前連損期數</td>
+                                            <td className="oehl-val-danger">{oehlStats.lostSumNow.odd}</td>
+                                            <td className="oehl-val-danger">{oehlStats.lostSumNow.peace}</td>
+                                            <td className="oehl-val-danger">{oehlStats.lostSumNow.even}</td>
+                                            <td className="oehl-val-danger">{oehlStats.lostSumNow.high}</td>
+                                            <td className="oehl-val-danger">{oehlStats.lostSumNow.middle}</td>
+                                            <td className="oehl-val-danger">{oehlStats.lostSumNow.low}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>
+                                等待官方數據載入...
+                            </div>
+                        )}
                     </div>
 
                     {/* 頭尾號盤路走勢矩陣 */}
@@ -527,31 +527,29 @@ export default function BingoStatistics() {
                         </div>
                     )}
 
-                    <div className="grid grid-2">
-                        {/* 尾數分佈統計 */}
-                        <div className="glass-card">
-                            <h3 className="section-title">🎯 尾數 (0-9) 出現次數統計</h3>
-                            <div className="stat-digit-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
-                                {lastDigitData.map((d) => (
-                                    <div key={d.digit} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--bg-page)', padding: '8px', borderRadius: 'var(--radius-sm)' }}>
-                                        <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary)' }}>{d.digit}</span>
-                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{d.count} 次</span>
-                                    </div>
-                                ))}
-                            </div>
+                    {/* 尾數分佈統計 — 獨立一行 */}
+                    <div className="glass-card" style={{ marginBottom: 20 }}>
+                        <h3 className="section-title">🎯 尾數 (0-9) 出現次數統計</h3>
+                        <div className="stat-digit-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 8 }}>
+                            {lastDigitData.map((d) => (
+                                <div key={d.digit} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--bg-page)', padding: '8px', borderRadius: 'var(--radius-sm)' }}>
+                                    <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary)' }}>{d.digit}</span>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{d.count} 次</span>
+                                </div>
+                            ))}
                         </div>
+                    </div>
 
-                        {/* 近期連莊號碼 */}
-                        <div className="glass-card" style={{ marginBottom: 20 }}>
-                            <h3 className="section-title">🔁 近期連莊號碼排行</h3>
-                            <div className="stat-consecutive-wrap" style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                                {consecutiveData.map((d) => (
-                                    <div key={d.number} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--bg-page)', padding: '8px', borderRadius: 'var(--radius-sm)' }}>
-                                        <div className="bingo-ball" style={{ width: 32, height: 32, fontSize: '0.9rem' }}>{d.number}</div>
-                                        <span style={{ fontSize: '0.8rem', color: 'var(--success)', marginTop: 4, fontWeight: 'bold' }}>{d.count} 次</span>
-                                    </div>
-                                ))}
-                            </div>
+                    {/* 近期連莊號碼 — 獨立一行 */}
+                    <div className="glass-card" style={{ marginBottom: 20 }}>
+                        <h3 className="section-title">🔁 近期連莊號碼排行</h3>
+                        <div className="stat-consecutive-wrap" style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                            {consecutiveData.map((d) => (
+                                <div key={d.number} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--bg-page)', padding: '10px 12px', borderRadius: 'var(--radius-sm)' }}>
+                                    <div className="bingo-ball" style={{ width: 36, height: 36, fontSize: '1rem' }}>{d.number}</div>
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--success)', marginTop: 6, fontWeight: 'bold' }}>{d.count} 次</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
