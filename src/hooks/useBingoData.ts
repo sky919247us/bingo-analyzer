@@ -16,11 +16,64 @@ const AVAILABLE_YEARS = [
 /** 後端 API 基底 URL (對應新建的 Cloudflare Worker) */
 const API_BASE = 'https://bingo-kv-worker.sky919247us.workers.dev';
 
-/** 即時模式刷新間隔（毫秒）— 每 300 秒(5分鐘)取一次最新期 */
-const LIVE_REFRESH_INTERVAL = 300_000;
-
 /** CSV 模式刷新間隔（毫秒）— 保持 60 秒 */
 const CSV_REFRESH_INTERVAL = 60_000;
+
+/** 前端提取延遲秒數：開獎後 10 秒再抓（等 Worker 延遲 5 秒抓取 + KV 寫入完成） */
+const FETCH_DELAY_SECS = 10;
+
+/**
+ * 取得台灣時間的時、分、秒
+ */
+function getTaipeiTime(): { hours: number; minutes: number; seconds: number } {
+    const now = new Date();
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Taipei',
+        hour: 'numeric', minute: 'numeric', second: 'numeric',
+        hour12: false,
+    }).formatToParts(now);
+    return {
+        hours: parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10),
+        minutes: parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10),
+        seconds: parseInt(parts.find(p => p.type === 'second')?.value || '0', 10),
+    };
+}
+
+/**
+ * 計算距離下一次提取的秒數
+ * 開獎時段：台灣時間 07:05 ~ 23:55（每日 203 期，每 5 分鐘一期）
+ * 提取時間點：07:05:10, 07:10:10, 07:15:10, ..., 23:55:10
+ */
+function getSecondsUntilNextFetch(): number {
+    const { hours, minutes, seconds } = getTaipeiTime();
+    const currentTotalSecs = hours * 3600 + minutes * 60 + seconds;
+
+    // 第一個提取點 07:05:10，最後一個 23:55:10，間隔 300 秒
+    const FIRST_FETCH = (7 * 60 + 5) * 60 + FETCH_DELAY_SECS;  // 07:05:10 = 25510s
+    const LAST_FETCH = (23 * 60 + 55) * 60 + FETCH_DELAY_SECS; // 23:55:10 = 86110s
+    const INTERVAL = 5 * 60; // 300s
+
+    // 還沒到第一期 → 等到 07:05:10
+    if (currentTotalSecs < FIRST_FETCH) {
+        return FIRST_FETCH - currentTotalSecs;
+    }
+
+    // 已過最後一期 → 等到隔天 07:05:10
+    if (currentTotalSecs >= LAST_FETCH + INTERVAL) {
+        return (24 * 3600 - currentTotalSecs) + FIRST_FETCH;
+    }
+
+    // 開獎時段中 → 計算下一個 5 分鐘提取點
+    const elapsed = currentTotalSecs - FIRST_FETCH;
+    const nextFetchSecs = FIRST_FETCH + (Math.floor(elapsed / INTERVAL) + 1) * INTERVAL;
+
+    // 若超過最後一期，等到隔天
+    if (nextFetchSecs > LAST_FETCH) {
+        return (24 * 3600 - currentTotalSecs) + FIRST_FETCH;
+    }
+
+    return nextFetchSecs - currentTotalSecs;
+}
 
 interface UseBingoDataReturn {
     draws: BingoDrawData[];
@@ -132,13 +185,13 @@ export function useBingoData(): UseBingoDataReturn {
         setLoading(true);
         setError(null);
         try {
-            const { draws: kvDraws, lastUpdated } = await fetchFromKV();
+            const { draws: kvDraws } = await fetchFromKV();
 
             if (!kvDraws || kvDraws.length === 0) {
                 setError('KV 暫無資料，等待 Worker 更新');
                 setDraws([]);
                 setRawDraws([]);
-                setCountdown(LIVE_REFRESH_INTERVAL / 1000);
+                setCountdown(getSecondsUntilNextFetch());
                 return;
             }
 
@@ -148,20 +201,11 @@ export function useBingoData(): UseBingoDataReturn {
             setDraws(sortedDraws);
             setRawDraws([]); // 即時模式下不使用 rawDraws
 
-            // 精確計算倒數計時：從 lastUpdated 起算 5 分鐘
-            if (lastUpdated) {
-                const lastTime = new Date(lastUpdated).getTime();
-                const now = Date.now();
-                const diffSecs = Math.floor((now - lastTime) / 1000);
-                const remaining = Math.max((LIVE_REFRESH_INTERVAL / 1000) - diffSecs, 5); // 至少 5 秒，避免 0
-                setCountdown(remaining);
-            } else {
-                setCountdown(LIVE_REFRESH_INTERVAL / 1000);
-            }
+            // 倒數計時：精確對齊下一期開獎 + 10 秒的提取時間
+            setCountdown(getSecondsUntilNextFetch());
         } catch {
             setError('即時資料取得失敗 (KV 連線異常)');
-            // 保留原有 draws，讓畫面不變空白
-            setCountdown(LIVE_REFRESH_INTERVAL / 1000);
+            setCountdown(getSecondsUntilNextFetch());
         } finally {
             setLoading(false);
         }
@@ -192,18 +236,38 @@ export function useBingoData(): UseBingoDataReturn {
         return loadCsv();
     }, [mode, loadLive, loadCsv]);
 
-    // 載入 + 定期刷新
+    // 即時模式：用 setTimeout 精確對齊開獎時間 +10 秒；CSV 模式：固定間隔
     useEffect(() => {
         loadData();
 
-        const interval = mode === 'live' ? LIVE_REFRESH_INTERVAL : CSV_REFRESH_INTERVAL;
-        timerRef.current = setInterval(loadData, interval);
-        countdownRef.current = setInterval(() => {
-            setCountdown((prev) => (prev <= 1 ? interval / 1000 : prev - 1));
-        }, 1000);
+        if (mode === 'live') {
+            // 即時模式：每次提取後重新計算下一次提取時間
+            const scheduleNext = () => {
+                const waitSecs = getSecondsUntilNextFetch();
+                setCountdown(waitSecs);
+                timerRef.current = setTimeout(() => {
+                    loadLive().then(scheduleNext);
+                }, waitSecs * 1000) as unknown as ReturnType<typeof setInterval>;
+            };
+            scheduleNext();
+
+            // 每秒倒數
+            countdownRef.current = setInterval(() => {
+                setCountdown((prev) => Math.max(prev - 1, 0));
+            }, 1000);
+        } else {
+            // CSV 模式：固定 60 秒刷新
+            timerRef.current = setInterval(loadData, CSV_REFRESH_INTERVAL);
+            countdownRef.current = setInterval(() => {
+                setCountdown((prev) => (prev <= 1 ? CSV_REFRESH_INTERVAL / 1000 : prev - 1));
+            }, 1000);
+        }
 
         return () => {
-            if (timerRef.current) clearInterval(timerRef.current);
+            if (timerRef.current) {
+                clearTimeout(timerRef.current as unknown as number);
+                clearInterval(timerRef.current);
+            }
             if (countdownRef.current) clearInterval(countdownRef.current);
         };
     }, [mode]); // 移除 loadData 依賴，避免重複觸發

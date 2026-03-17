@@ -54,15 +54,25 @@ async function fetchHistoryPageFromTLC(dateStr: string, page: number = 1): Promi
     };
 }
 
+/** 判斷 drawTime 是否為有效時間（排除 0001-01-01 等無效預設值） */
+function isValidDrawTime(drawTime: string | undefined | null): boolean {
+    if (!drawTime || !drawTime.includes(':')) return false;
+    // 台彩 API 回傳無效時間為 "0001-01-01T00:00:00"，必須排除
+    if (drawTime.startsWith('0001') || drawTime.startsWith('0000')) return false;
+    const ts = new Date(drawTime).getTime();
+    // 排除 Unix epoch 前的時間戳
+    return !isNaN(ts) && ts > 0;
+}
+
 function fillMissingTimes(draws: any[]) {
-    const anchor = draws.find(d => d.drawTime && d.drawTime.includes(':'));
+    const anchor = draws.find(d => isValidDrawTime(d.drawTime));
     if (!anchor) return draws;
 
     const anchorTime = new Date(anchor.drawTime).getTime();
     const anchorPeriod = Number(anchor.period);
 
     return draws.map(d => {
-        if (d.drawTime && d.drawTime.includes(':')) return d;
+        if (isValidDrawTime(d.drawTime)) return d;
         const periodDiff = Number(d.period) - anchorPeriod;
         const calculatedDate = new Date(anchorTime + periodDiff * 5 * 60 * 1000);
         return {
@@ -101,16 +111,52 @@ export default {
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-      ctx.waitUntil(syncDrawsToKV(env));
+      // Cron 在整分鐘觸發，延遲 5 秒確保台彩 API 已更新最新獎號
+      // 模擬 07:05:01, 07:10:01, ..., 23:55:01 的提取時間點
+      ctx.waitUntil(
+          new Promise(resolve => setTimeout(resolve, 5000))
+              .then(() => syncDrawsToKV(env))
+      );
   },
 };
 
+/**
+ * 每日開獎時段：台灣時間 07:05 ~ 23:55，每 5 分鐘一期，共 203 期
+ * Cron 每 5 分鐘觸發一次，延遲 5 秒後執行（確保台彩 API 已更新）
+ */
 async function syncDrawsToKV(env: Env) {
     try {
       const now = new Date();
-      const adjustedNow = new Date(now.getTime() - 4 * 60 * 60 * 1000); 
-      const options = { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' } as const;
-      const todayDateStr = adjustedNow.toLocaleDateString('en-CA', options);
+      const taipeiFormatter = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Asia/Taipei',
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', hour12: false,
+      });
+      const parts = taipeiFormatter.formatToParts(now);
+      const taipeiHour = parseInt(parts.find(p => p.type === 'hour')?.value || '12', 10);
+      const taipeiMinute = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
+      const taipeiYear = parts.find(p => p.type === 'year')?.value;
+      const taipeiMonth = parts.find(p => p.type === 'month')?.value;
+      const taipeiDay = parts.find(p => p.type === 'day')?.value;
+      const taipeiTimeMinutes = taipeiHour * 60 + taipeiMinute; // 轉為當日分鐘數
+
+      // 開獎時段：07:05(=425分) ~ 23:55(=1435分)，超出範圍僅做換日不抓新資料
+      const DRAW_START = 7 * 60 + 5;   // 07:05 = 425
+      const DRAW_END = 23 * 60 + 55;   // 23:55 = 1435
+      const isDrawTime = taipeiTimeMinutes >= DRAW_START && taipeiTimeMinutes <= DRAW_END;
+
+      // 換日邏輯：凌晨 00:00~04:59 視為前一天
+      let todayDateStr: string;
+      if (taipeiHour < 5) {
+          const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          const yParts = taipeiFormatter.formatToParts(yesterday);
+          const yYear = yParts.find(p => p.type === 'year')?.value;
+          const yMonth = yParts.find(p => p.type === 'month')?.value;
+          const yDay = yParts.find(p => p.type === 'day')?.value;
+          todayDateStr = `${yYear}-${yMonth}-${yDay}`;
+      } else {
+          todayDateStr = `${taipeiYear}-${taipeiMonth}-${taipeiDay}`;
+      }
 
       const savedDate = await env.BINGO_KV.get('today_date');
       if (savedDate !== todayDateStr) {
@@ -118,9 +164,20 @@ async function syncDrawsToKV(env: Env) {
           await env.BINGO_KV.put('today_draws', JSON.stringify([]));
       }
 
+      // 非開獎時段（07:05 前或 23:55 後）只做換日，不抓新資料
+      if (!isDrawTime) {
+          console.log(`[syncDrawsToKV] 非開獎時段 (台灣 ${taipeiHour}:${String(taipeiMinute).padStart(2, '0')})，僅執行換日檢查`);
+          await env.BINGO_KV.put('last_updated', new Date().toISOString());
+          return;
+      }
+
       let newDraw: any = null;
-      try { newDraw = await fetchLatestFromTLC(); } catch {}
-      
+      try {
+          newDraw = await fetchLatestFromTLC();
+      } catch (err) {
+          console.error('[syncDrawsToKV] fetchLatestFromTLC failed:', err);
+      }
+
       const { totalSize, draws: page1Draws } = await fetchHistoryPageFromTLC(todayDateStr, 1);
       if (page1Draws.length === 0 && !newDraw) return;
 
@@ -149,7 +206,7 @@ async function syncDrawsToKV(env: Env) {
           isUpdated = true;
       }
 
-      if (isUpdated || todayDraws.some(d => !d.drawTime || !d.drawTime.includes(':'))) {
+      if (isUpdated || todayDraws.some(d => !isValidDrawTime(d.drawTime))) {
           todayDraws = fillMissingTimes(todayDraws);
           isUpdated = true;
       }
@@ -160,5 +217,8 @@ async function syncDrawsToKV(env: Env) {
           await env.BINGO_KV.put('latest_draw', JSON.stringify(todayDraws[0]));
       }
       await env.BINGO_KV.put('last_updated', new Date().toISOString());
-    } catch (err) {}
+      console.log(`[syncDrawsToKV] 同步完成，日期=${todayDateStr}，筆數=${todayDraws.length}，已更新=${isUpdated}`);
+    } catch (err) {
+      console.error('[syncDrawsToKV] 同步失敗:', err);
+    }
 }
