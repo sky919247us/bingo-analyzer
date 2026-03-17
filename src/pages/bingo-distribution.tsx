@@ -5,33 +5,19 @@ export default function BingoDistribution() {
     useSeo({ title: '獎號分布走勢', description: '統整80顆賓果號碼的開獎分佈圖，掌握冷熱趨勢與超級獎號落點。', keywords: '號碼分佈圖, 獎號分析' });
     const { draws, loading, error } = useBingoData();
 
-    /** 
-     * KV 中已由後端提供精確 ISO 時間字串
+    /**
+     * 從 drawTime 字串直接擷取 HH:MM
+     * KV 中的時間格式可能是：
+     *   "2026-03-17T15:05:00.000Z" (fillMissingTimes 產生，Z 不代表真正 UTC)
+     *   "2026-03-17T15:05:00"      (LatestBingoResult 原始)
+     *   "2026-03-17 15:05"          (OEHLStatistic 格式)
+     * 台彩的時間一律是台灣時間，直接從字串取 HH:MM 最準確
      */
-    const getDrawTime = (currentDraw: any, allDraws: any[]) => {
-        // 如果有完整的有效時間
-        if (currentDraw.drawTime && currentDraw.drawTime !== '0001-01-01T00:00:00' && currentDraw.drawTime.includes(':')) {
-            try {
-                const d = new Date(currentDraw.drawTime);
-                if (!isNaN(d.getTime())) {
-                    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-                }
-            } catch {}
-        }
-
-        // 備援機制：如果沒時間，根據當前陣列中「最新一期」有時間的期數來推算
-        // 賓果每期固定 5 分鐘
-        const anchor = allDraws.find(d => d.drawTime && d.drawTime !== '0001-01-01T00:00:00' && d.drawTime.includes(':'));
-        if (anchor) {
-            try {
-                const anchorTime = new Date(anchor.drawTime).getTime();
-                const periodDiff = Number(currentDraw.period) - Number(anchor.period);
-                const calculatedDate = new Date(anchorTime + periodDiff * 5 * 60 * 1000);
-                return `${calculatedDate.getHours().toString().padStart(2, '0')}:${calculatedDate.getMinutes().toString().padStart(2, '0')}`;
-            } catch {}
-        }
-
-        return "—";
+    const getDrawTime = (currentDraw: any) => {
+        const dt = currentDraw.drawTime;
+        if (!dt || dt.startsWith('0001') || dt.startsWith('0000')) return '—';
+        const match = dt.match(/(\d{2}):(\d{2})/);
+        return match ? `${match[1]}:${match[2]}` : '—';
     };
 
     /** 解析每期的大小單雙屬性 */
@@ -111,7 +97,7 @@ export default function BingoDistribution() {
                                                 color: 'var(--text-main)',
                                                 boxShadow: '2px 0 5px rgba(0,0,0,0.05)'
                                             }}>
-                                                {getDrawTime(draw, draws)}
+                                                {getDrawTime(draw)}
                                             </td>
                                             
                                             {/* 大小 Badge */}

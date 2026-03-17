@@ -10,20 +10,17 @@ export default function BingoLatest() {
     useSeo({ title: '最新即時開獎', description: '追蹤最新期數賓果開獎號碼與連莊動態。', keywords: '賓果最新開獎, 賓果開獎號碼' });
     const { latestDraw, latestStats, loading, countdown, draws, error, refresh } = useBingoData();
 
-    /** 格式化 Date 物件為顯示用字串 */
-    const formatDate = (dt: Date) =>
-        `${dt.getFullYear()}/${(dt.getMonth() + 1).toString().padStart(2, '0')}/${dt.getDate().toString().padStart(2, '0')} ${dt.getHours().toString().padStart(2, '0')}:${dt.getMinutes().toString().padStart(2, '0')}`;
-
-    /** 格式化開獎時間（原始字串版） */
+    /**
+     * 格式化開獎時間 — 直接從字串擷取日期與 HH:MM
+     * 台彩時間一律為台灣時間，避免 new Date() 的時區轉換問題
+     */
     const formatDrawTime = (drawTime: string) => {
-        if (!drawTime || drawTime === '0001-01-01T00:00:00') return '—';
-        try {
-            const dt = new Date(drawTime);
-            if (isNaN(dt.getTime())) return drawTime;
-            return formatDate(dt);
-        } catch {
-            return drawTime;
-        }
+        if (!drawTime || drawTime.startsWith('0001') || drawTime.startsWith('0000')) return '—';
+        // 匹配 YYYY-MM-DD 和 HH:MM
+        const dateMatch = drawTime.match(/(\d{4})-(\d{2})-(\d{2})/);
+        const timeMatch = drawTime.match(/(\d{2}):(\d{2})/);
+        if (!dateMatch || !timeMatch) return drawTime;
+        return `${dateMatch[1]}/${dateMatch[2]}/${dateMatch[3]} ${timeMatch[1]}:${timeMatch[2]}`;
     };
 
 
