@@ -8,15 +8,30 @@ export default function BingoDistribution() {
     /** 
      * KV 中已由後端提供精確 ISO 時間字串
      */
-    const getDrawTime = (drawTime: string) => {
-        if (!drawTime || drawTime === '0001-01-01T00:00:00') return '—';
-        try {
-            const d = new Date(drawTime);
-            if (!isNaN(d.getTime())) {
-                return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-            }
-        } catch {}
-        return "00:00";
+    const getDrawTime = (currentDraw: any, allDraws: any[]) => {
+        // 如果有完整的有效時間
+        if (currentDraw.drawTime && currentDraw.drawTime !== '0001-01-01T00:00:00' && currentDraw.drawTime.includes(':')) {
+            try {
+                const d = new Date(currentDraw.drawTime);
+                if (!isNaN(d.getTime())) {
+                    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+                }
+            } catch {}
+        }
+
+        // 備援機制：如果沒時間，根據當前陣列中「最新一期」有時間的期數來推算
+        // 賓果每期固定 5 分鐘
+        const anchor = allDraws.find(d => d.drawTime && d.drawTime !== '0001-01-01T00:00:00' && d.drawTime.includes(':'));
+        if (anchor) {
+            try {
+                const anchorTime = new Date(anchor.drawTime).getTime();
+                const periodDiff = Number(currentDraw.period) - Number(anchor.period);
+                const calculatedDate = new Date(anchorTime + periodDiff * 5 * 60 * 1000);
+                return `${calculatedDate.getHours().toString().padStart(2, '0')}:${calculatedDate.getMinutes().toString().padStart(2, '0')}`;
+            } catch {}
+        }
+
+        return "—";
     };
 
     /** 解析每期的大小單雙屬性 */
@@ -27,8 +42,12 @@ export default function BingoDistribution() {
             if (n > 40) bigCount++;
             if (n % 2 !== 0) oddCount++;
         });
-        const bsResult = bigCount > 10 ? '大' : (bigCount < 10 ? '小' : '和');
-        const oeResult = oddCount > 10 ? '單' : (oddCount < 10 ? '雙' : '和');
+        const smallCount = 20 - bigCount;
+        const evenCount = 20 - oddCount;
+
+        // 修正：必須 >= 13 才成立，否則為和
+        const bsResult = bigCount >= 13 ? '大' : (smallCount >= 13 ? '小' : '和');
+        const oeResult = oddCount >= 13 ? '單' : (evenCount >= 13 ? '雙' : '和');
         return { bsResult, oeResult };
     };
 
@@ -92,7 +111,7 @@ export default function BingoDistribution() {
                                                 color: 'var(--text-main)',
                                                 boxShadow: '2px 0 5px rgba(0,0,0,0.05)'
                                             }}>
-                                                {getDrawTime(draw.drawTime)}
+                                                {getDrawTime(draw, draws)}
                                             </td>
                                             
                                             {/* 大小 Badge */}
