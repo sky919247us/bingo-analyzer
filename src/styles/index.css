@@ -1545,3 +1545,88 @@ select.form-input {
 th.oehl-odd, th.oehl-even { background: var(--primary) !important; }
 th.oehl-high, th.oehl-low { background: var(--warning) !important; color: var(--primary) !important; }
 th.oehl-peace { background: var(--primary-hover) !important; }
+
+/* === 統計頁面手機版 RWD === */
+@media (max-width: 768px) {
+  /* OEHL 表格手機優化 */
+  .oehl-table,
+  .oehl-result-table {
+    font-size: 0.75rem;
+  }
+  .oehl-table th,
+  .oehl-table td,
+  .oehl-result-table th,
+  .oehl-result-table td {
+    padding: 6px 4px;
+  }
+  .oehl-label {
+    font-size: 0.72rem;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+  .oehl-val-bold { font-size: 0.85rem; }
+  .oehl-val-danger { font-size: 0.9rem; }
+  .oehl-time { font-size: 0.7rem; }
+  .oehl-period { font-size: 0.7rem; }
+
+  /* 遺漏值 grid 手機版改 3 欄 */
+  .stat-gap-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  /* 超級獎號內 grid 手機版改 1 欄 */
+  .stat-super-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* 尾數分佈 grid 手機版改 5 欄保持 */
+  .stat-digit-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  /* 連莊 / 拖號卡片間距縮小 */
+  .stat-consecutive-wrap {
+    gap: 8px !important;
+  }
+
+  /* 拖號 / 跳期卡片 */
+  .stat-item-card {
+    padding: 8px !important;
+  }
+  .stat-item-card .bingo-ball {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* 盤路矩陣容器水平捲動 */
+  .matrix-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* glass-card / card 手機間距 */
+  .glass-card,
+  .card {
+    padding: var(--space-sm) !important;
+  }
+
+  /* section-title 手機版 */
+  .section-title {
+    font-size: 0.9rem !important;
+  }
+
+  /* 圖表高度縮小 */
+  .stat-chart-wrap {
+    height: 250px !important;
+  }
+
+  /* 篩選按鈕縮小 */
+  .filter-btn {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+}

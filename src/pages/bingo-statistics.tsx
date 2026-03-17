@@ -215,7 +215,7 @@ export default function BingoStatistics() {
                             <div className="glass-card stat-card">
                                 <span className="stat-label">最高頻號碼</span>
                                 <span className="stat-value">#{stats.hottest.number}</span>
-                                <span style={{ fontSize: '0.8rem', color: 'var(--accent-green)' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--success)' }}>
                                     出現 {stats.hottest.count} 次
                                 </span>
                             </div>
@@ -229,7 +229,7 @@ export default function BingoStatistics() {
                             <div className="glass-card stat-card">
                                 <span className="stat-label">最低頻號碼</span>
                                 <span className="stat-value danger">#{stats.coldest.number}</span>
-                                <span style={{ fontSize: '0.8rem', color: 'var(--accent-red)' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--danger)' }}>
                                     出現 {stats.coldest.count} 次
                                 </span>
                             </div>
@@ -263,7 +263,7 @@ export default function BingoStatistics() {
                         </div>
 
                         {/* 長條圖 */}
-                        <div style={{ width: '100%', height: 350 }}>
+                        <div className="stat-chart-wrap" style={{ width: '100%', height: 350 }}>
                             <ResponsiveContainer>
                                 <BarChart data={filteredData} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" />
@@ -296,7 +296,7 @@ export default function BingoStatistics() {
                     {/* 遺漏值分析 */}
                     <div className="glass-card" style={{ marginBottom: 20 }}>
                         <h3 className="section-title">⏳ 遺漏值分析 (最久未開出號碼)</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 12 }}>
+                        <div className="stat-gap-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 12 }}>
                             {gapData.slice(0, 10).map((d) => (
                                 <div key={d.number} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 8px', background: 'var(--bg-page)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
                                     <div className="bingo-ball">{d.number}</div>
@@ -315,9 +315,9 @@ export default function BingoStatistics() {
                                 <span className="bingo-ball super" style={{ width: 24, height: 24, fontSize: '0.8rem' }}>S</span> 
                                 超級獎號分析
                             </h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                            <div className="stat-super-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                                 <div>
-                                    <h4 style={{ fontSize: '0.9rem', color: 'var(--accent-green)', marginBottom: 8 }}>🔥 熱門超級獎號</h4>
+                                    <h4 style={{ fontSize: '0.9rem', color: 'var(--success)', marginBottom: 8 }}>🔥 熱門超級獎號</h4>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                                         {superData.hottest.map((d) => (
                                             <div key={d.number} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--bg-page)', padding: '4px 8px', borderRadius: 'var(--radius-sm)' }}>
@@ -328,7 +328,7 @@ export default function BingoStatistics() {
                                     </div>
                                 </div>
                                 <div>
-                                    <h4 style={{ fontSize: '0.9rem', color: 'var(--accent-red)', marginBottom: 8 }}>🧊 冷門超級獎號</h4>
+                                    <h4 style={{ fontSize: '0.9rem', color: 'var(--danger)', marginBottom: 8 }}>🧊 冷門超級獎號</h4>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                                         {superData.coldest.map((d) => (
                                             <div key={d.number} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--bg-page)', padding: '4px 8px', borderRadius: 'var(--radius-sm)' }}>
@@ -531,7 +531,7 @@ export default function BingoStatistics() {
                         {/* 尾數分佈統計 */}
                         <div className="glass-card">
                             <h3 className="section-title">🎯 尾數 (0-9) 出現次數統計</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+                            <div className="stat-digit-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
                                 {lastDigitData.map((d) => (
                                     <div key={d.digit} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--bg-page)', padding: '8px', borderRadius: 'var(--radius-sm)' }}>
                                         <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary)' }}>{d.digit}</span>
@@ -544,11 +544,11 @@ export default function BingoStatistics() {
                         {/* 近期連莊號碼 */}
                         <div className="glass-card" style={{ marginBottom: 20 }}>
                             <h3 className="section-title">🔁 近期連莊號碼排行</h3>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                            <div className="stat-consecutive-wrap" style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                                 {consecutiveData.map((d) => (
                                     <div key={d.number} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--bg-page)', padding: '8px', borderRadius: 'var(--radius-sm)' }}>
                                         <div className="bingo-ball" style={{ width: 32, height: 32, fontSize: '0.9rem' }}>{d.number}</div>
-                                        <span style={{ fontSize: '0.8rem', color: 'var(--accent-green)', marginTop: 4, fontWeight: 'bold' }}>{d.count} 次</span>
+                                        <span style={{ fontSize: '0.8rem', color: 'var(--success)', marginTop: 4, fontWeight: 'bold' }}>{d.count} 次</span>
                                     </div>
                                 ))}
                             </div>
@@ -561,14 +561,14 @@ export default function BingoStatistics() {
                             <h3 className="section-title">🔗 雙贏拖號分析 (最常同開組合)</h3>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                 {associatedData.map((d, index) => (
-                                    <div key={index} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-page)', padding: '12px', borderRadius: 'var(--radius-sm)', borderLeft: '4px solid var(--primary)' }}>
+                                    <div key={index} className="stat-item-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-page)', padding: '12px', borderRadius: 'var(--radius-sm)', borderLeft: '4px solid var(--primary)' }}>
                                         <div style={{ display: 'flex', gap: 8 }}>
                                             <div className="bingo-ball" style={{ width: 32, height: 32, fontSize: '0.9rem' }}>{d.n1}</div>
                                             <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>&</span>
                                             <div className="bingo-ball relative" style={{ width: 32, height: 32, fontSize: '0.9rem' }}>{d.n2}</div>
                                         </div>
                                         <div style={{ textAlign: 'right' }}>
-                                            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-green)' }}>{d.count} 次</div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--success)' }}>{d.count} 次</div>
                                             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>同開次數</div>
                                         </div>
                                     </div>
@@ -581,7 +581,7 @@ export default function BingoStatistics() {
                             <h3 className="section-title">⏱️ 跳期規律分析 (即將到期)</h3>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                 {skipAnalysisData.map((d) => (
-                                    <div key={d.number} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-page)', padding: '12px', borderRadius: 'var(--radius-sm)', borderLeft: '4px solid var(--warning)' }}>
+                                    <div key={d.number} className="stat-item-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-page)', padding: '12px', borderRadius: 'var(--radius-sm)', borderLeft: '4px solid var(--warning)' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                             <div className="bingo-ball super" style={{ width: 36, height: 36, fontSize: '1rem' }}>{d.number}</div>
                                             <div>
