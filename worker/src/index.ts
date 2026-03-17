@@ -75,21 +75,46 @@ function isValidDrawTime(drawTime: string | undefined | null): boolean {
     return !isNaN(ts) && ts > 0;
 }
 
-/** 根據已知錨點推算缺失的 drawTime */
-function fillMissingTimes(draws: any[]) {
+/**
+ * 用 OEHL 的 drawTime 對照表或已知錨點推算缺失的 drawTime
+ * @param oehlTimeMap  期數→台灣時間字串 (來自 OEHLStatistic API)
+ */
+function fillMissingTimes(draws: any[], oehlTimeMap?: Map<string, string>) {
+    // 第一步：用 OEHL 時間填補
+    if (oehlTimeMap && oehlTimeMap.size > 0) {
+        draws.forEach(d => {
+            if (!isValidDrawTime(d.drawTime)) {
+                const oehlTime = oehlTimeMap.get(d.period);
+                if (oehlTime) {
+                    // OEHL 格式: "2026-03-17 15:05" → 轉為 "2026-03-17T15:05:00"
+                    d.drawTime = oehlTime.replace(' ', 'T') + ':00';
+                }
+            }
+        });
+    }
+
+    // 第二步：用已知錨點推算剩餘的
     const anchor = draws.find(d => isValidDrawTime(d.drawTime));
     if (!anchor) return draws;
 
-    const anchorTime = new Date(anchor.drawTime).getTime();
+    // 取得錨點的 HH:MM 分鐘數（直接從字串擷取，不用 new Date 避免時區問題）
+    const anchorMatch = anchor.drawTime.match(/(\d{4}-\d{2}-\d{2})[T ](\d{2}):(\d{2})/);
+    if (!anchorMatch) return draws;
+    const anchorDateStr = anchorMatch[1];
+    const anchorHH = parseInt(anchorMatch[2], 10);
+    const anchorMM = parseInt(anchorMatch[3], 10);
+    const anchorTotalMin = anchorHH * 60 + anchorMM;
     const anchorPeriod = Number(anchor.period);
 
     return draws.map(d => {
         if (isValidDrawTime(d.drawTime)) return d;
         const periodDiff = Number(d.period) - anchorPeriod;
-        const calculatedDate = new Date(anchorTime + periodDiff * 5 * 60 * 1000);
+        const totalMin = anchorTotalMin + periodDiff * 5;
+        const hh = String(Math.floor(totalMin / 60)).padStart(2, '0');
+        const mm = String(totalMin % 60).padStart(2, '0');
         return {
             ...d,
-            drawTime: calculatedDate.toISOString()
+            drawTime: `${anchorDateStr}T${hh}:${mm}:00`
         };
     });
 }
@@ -117,7 +142,7 @@ export default {
             return new Response(JSON.stringify({ success: true, oehl: rawOehl ? JSON.parse(rawOehl) : null, lastUpdated }), { headers: corsHeaders });
         }
         if (url.pathname === '/api/kv/force-update') {
-            await syncDrawsToKV(env);
+            await syncDrawsToKV(env, true);
             const lastUpdated = await env.BINGO_KV.get('last_updated');
             return new Response(JSON.stringify({ success: true, message: 'Forced update success.', lastUpdated }), { headers: corsHeaders });
         }
@@ -142,7 +167,7 @@ export default {
  * 偵測策略：OEHLStatistic（最快）→ LatestBingoResult → BingoResult（歷史）
  * 重試：每 10 秒一次，最多 20 次（涵蓋 200 秒）
  */
-async function syncDrawsToKV(env: Env) {
+async function syncDrawsToKV(env: Env, skipRetry: boolean = false) {
     try {
       const now = new Date();
       const taipeiFormatter = new Intl.DateTimeFormat('en-CA', {
@@ -199,7 +224,7 @@ async function syncDrawsToKV(env: Env) {
       // === 第一階段：用 OEHLStatistic 偵測新期數（此 API 更新最快） ===
       let oehlData: any = null;
       let oehlLatestPeriod: string | null = null;
-      const MAX_RETRIES = 20;
+      const MAX_RETRIES = skipRetry ? 0 : 20;
       const RETRY_DELAY = 10_000;
 
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -273,14 +298,30 @@ async function syncDrawsToKV(env: Env) {
               allFetched.push(...nextDraws);
               page++;
           }
-          const map = new Map();
+          // 合併時優先保留有效的 drawTime（History API 的 dDate 通常是 0001-01-01）
+          const map = new Map<string, any>();
+          // 先放 History（可能有無效時間）
           allFetched.forEach(d => map.set(d.period, d));
+          // 再用 todayDraws 覆蓋（已有的有效時間不被沖掉）
+          todayDraws.forEach(d => {
+              const existing = map.get(d.period);
+              if (!existing || isValidDrawTime(d.drawTime)) {
+                  map.set(d.period, d);
+              }
+          });
           todayDraws = Array.from(map.values());
           isUpdated = true;
       }
 
       if (isUpdated || todayDraws.some(d => !isValidDrawTime(d.drawTime))) {
-          todayDraws = fillMissingTimes(todayDraws);
+          // 從 OEHL 建立期數→時間對照表
+          const oehlTimeMap = new Map<string, string>();
+          if (oehlData?.todayResults) {
+              for (const r of oehlData.todayResults) {
+                  oehlTimeMap.set(String(r.drawTerm), r.drawTime);
+              }
+          }
+          todayDraws = fillMissingTimes(todayDraws, oehlTimeMap);
           isUpdated = true;
       }
 
