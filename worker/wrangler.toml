@@ -1,0 +1,14 @@
+name = "bingo-kv-worker"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# KV Namespace 綁定（部署前需先建立並替換 id）
+[[kv_namespaces]]
+binding = "BINGO_KV"
+id = "70a64942296646beb26ecd8aea27597c"
+
+# Cron Trigger：
+# 1. 每天 07:00~23:55(台灣時間) 抓取資料，轉換為 UTC 為 23:00~15:55
+# 2. 每天凌晨 04:05 (台灣時間) 自動觸發一次，轉換為 UTC 為 20:05，強制觸發換日清空邏輯
+[triggers]
+crons = ["*/5 0-15,23 * * *", "5 20 * * *"]
