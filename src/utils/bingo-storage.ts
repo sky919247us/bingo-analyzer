@@ -4,8 +4,21 @@
  * 支援多期投注（期數：1-12 期）
  */
 
+import type { GameType, SideSelection } from '../models/side-games';
+
 /** 單筆預測紀錄 */
 export interface PredictionRecord {
+    /**
+     * 玩法類型，預設 'basic'（基本玩法）。
+     * 舊紀錄沒有這個欄位，getRecords() 會補上 'basic' 以維持相容。
+     * - basic    : 使用 numbers + starCount
+     * - super    : 使用 numbers（1~20 個預測的超級獎號），starCount 無意義
+     * - bigSmall : 使用 sideSelections（'大' / '小'）
+     * - oddEven  : 使用 sideSelections（'單' / '雙'）
+     */
+    gameType: GameType;
+    /** 猜大小 / 猜單雙的投注選項；其他玩法為空陣列 */
+    sideSelections: SideSelection[];
     /** 唯一 ID (timestamp-based) */
     id: string;
     /** 儲存日期時間 */
@@ -46,6 +59,8 @@ export function getRecords(): PredictionRecord[] {
             periodCount: r.periodCount ?? 1,
             startPeriod: r.startPeriod ?? '',
             savedAtISO: r.savedAtISO ?? '',
+            gameType: r.gameType ?? 'basic',
+            sideSelections: r.sideSelections ?? [],
         }));
     } catch {
         return [];

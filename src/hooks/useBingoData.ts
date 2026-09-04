@@ -1,11 +1,20 @@
 /**
  * 台灣彩券賓果賓果 — 資料取得 Hook
- * - 「即時模式」：從後端 API (/api/latest, /api/history) 取得即時開獎資料
+ * - 「即時模式」：**前端直連台彩 API**，開獎後守候式輪詢（見 utils/tlc-direct.ts）
+ *   Cloudflare Worker KV 降級為 fallback（直連失敗時）與 OEHL 大小單雙統計的來源
  * - 「CSV 模式」：從 public/data/ 載入靜態歷史 CSV（作為 Fallback 或年份瀏覽）
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { parseCsvData, type DrawResult } from '../utils/csv-parser';
 import type { BingoDrawData } from '../utils/bingo-strategies';
+import {
+    fetchDayDirect,
+    isFirstDrawOfDay,
+    secondsUntilNextDraw,
+    taipeiDateStr,
+    taipeiDateTimeStr,
+    waitForDraw,
+} from '../utils/tlc-direct';
 
 /** 可用的歷史年份清單 */
 const AVAILABLE_YEARS = [
@@ -18,62 +27,6 @@ const API_BASE = 'https://bingo-kv-worker.sky919247us.workers.dev';
 
 /** CSV 模式刷新間隔（毫秒）— 保持 60 秒 */
 const CSV_REFRESH_INTERVAL = 60_000;
-
-/** 前端提取延遲秒數：Worker 用 OEHL 偵測新期後寫入 KV，前端多等 10 秒 */
-const FETCH_DELAY_SECS = 50;
-
-/**
- * 取得台灣時間的時、分、秒
- */
-function getTaipeiTime(): { hours: number; minutes: number; seconds: number } {
-    const now = new Date();
-    const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'Asia/Taipei',
-        hour: 'numeric', minute: 'numeric', second: 'numeric',
-        hour12: false,
-    }).formatToParts(now);
-    return {
-        hours: parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10),
-        minutes: parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10),
-        seconds: parseInt(parts.find(p => p.type === 'second')?.value || '0', 10),
-    };
-}
-
-/**
- * 計算距離下一次提取的秒數
- * 開獎時段：台灣時間 07:05 ~ 23:55（每日 203 期，每 5 分鐘一期）
- * 提取時間點：07:05:30, 07:10:30, 07:15:30, ..., 23:55:30
- */
-function getSecondsUntilNextFetch(): number {
-    const { hours, minutes, seconds } = getTaipeiTime();
-    const currentTotalSecs = hours * 3600 + minutes * 60 + seconds;
-
-    // 第一個提取點 07:05:10，最後一個 23:55:10，間隔 300 秒
-    const FIRST_FETCH = (7 * 60 + 5) * 60 + FETCH_DELAY_SECS;  // 07:05:40 = 25540s
-    const LAST_FETCH = (23 * 60 + 55) * 60 + FETCH_DELAY_SECS; // 23:55:40 = 86140s
-    const INTERVAL = 5 * 60; // 300s
-
-    // 還沒到第一期 → 等到 07:05:10
-    if (currentTotalSecs < FIRST_FETCH) {
-        return FIRST_FETCH - currentTotalSecs;
-    }
-
-    // 已過最後一期 → 等到隔天 07:05:10
-    if (currentTotalSecs >= LAST_FETCH + INTERVAL) {
-        return (24 * 3600 - currentTotalSecs) + FIRST_FETCH;
-    }
-
-    // 開獎時段中 → 計算下一個 5 分鐘提取點
-    const elapsed = currentTotalSecs - FIRST_FETCH;
-    const nextFetchSecs = FIRST_FETCH + (Math.floor(elapsed / INTERVAL) + 1) * INTERVAL;
-
-    // 若超過最後一期，等到隔天
-    if (nextFetchSecs > LAST_FETCH) {
-        return (24 * 3600 - currentTotalSecs) + FIRST_FETCH;
-    }
-
-    return nextFetchSecs - currentTotalSecs;
-}
 
 /** OEHL 大小單雙統計資料結構 */
 export interface OEHLStats {
@@ -229,37 +182,58 @@ export function useBingoData(): UseBingoDataReturn {
     const [oehlStats, setOehlStats] = useState<OEHLStats | null>(null);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    /** 目前已知的最新期別，守候輪詢用來判斷是否為新的一期 */
+    const latestPeriodRef = useRef<string | null>(null);
 
-    /** 即時模式：從 Worker KV 取得資料 */
+    /**
+     * 即時模式：直連台彩 API 撈當日全部期數（頁面開啟或手動刷新時用）
+     * 直連失敗才退回 Worker KV
+     */
     const loadLive = useCallback(async () => {
         setLoading(true);
         setError(null);
-        try {
-            const [{ draws: kvDraws }, oehl] = await Promise.all([
-                fetchFromKV(),
-                fetchOEHLFromKV(),
-            ]);
-            if (oehl) setOehlStats(oehl);
 
-            if (!kvDraws || kvDraws.length === 0) {
-                setError('KV 暫無資料，等待 Worker 更新');
-                setDraws([]);
+        // OEHL 大小單雙統計仍由 Worker 計算，非阻塞地取回
+        fetchOEHLFromKV().then((oehl) => { if (oehl) setOehlStats(oehl); });
+
+        try {
+            const dateStr = taipeiDateStr();
+            const direct = await fetchDayDirect(dateStr);
+
+            if (direct.length > 0) {
+                setDraws(direct);
                 setRawDraws([]);
-                setCountdown(getSecondsUntilNextFetch());
+                latestPeriodRef.current = direct[0].period;
+                setCountdown(secondsUntilNextDraw());
                 return;
             }
 
-            // 按期數降序排列，確保最新在前
-            const sortedDraws = [...kvDraws].sort((a, b) => Number(b.period) - Number(a.period));
-
-            setDraws(sortedDraws);
-            setRawDraws([]); // 即時模式下不使用 rawDraws
-
-            // 倒數計時：精確對齊下一期開獎 + 10 秒的提取時間
-            setCountdown(getSecondsUntilNextFetch());
+            // 當日尚無開獎（清晨時段）→ 退回 KV 看看有沒有前一日資料
+            const { draws: kvDraws } = await fetchFromKV();
+            if (kvDraws && kvDraws.length > 0) {
+                const sorted = [...kvDraws].sort((a, b) => Number(b.period) - Number(a.period));
+                setDraws(sorted);
+                setRawDraws([]);
+                latestPeriodRef.current = sorted[0].period;
+            } else {
+                setError('當日尚無開獎資料');
+                setDraws([]);
+                setRawDraws([]);
+            }
+            setCountdown(secondsUntilNextDraw());
         } catch {
-            setError('即時資料取得失敗 (KV 連線異常)');
-            setCountdown(getSecondsUntilNextFetch());
+            // 直連整個失敗（斷網 / API 異常）→ 最後退回 KV
+            const { draws: kvDraws } = await fetchFromKV();
+            if (kvDraws && kvDraws.length > 0) {
+                const sorted = [...kvDraws].sort((a, b) => Number(b.period) - Number(a.period));
+                setDraws(sorted);
+                setRawDraws([]);
+                latestPeriodRef.current = sorted[0].period;
+                setError('台彩 API 直連失敗，已改用備援資料');
+            } else {
+                setError('即時資料取得失敗');
+            }
+            setCountdown(secondsUntilNextDraw());
         } finally {
             setLoading(false);
         }
@@ -295,12 +269,41 @@ export function useBingoData(): UseBingoDataReturn {
         loadData();
 
         if (mode === 'live') {
-            // 即時模式：每次提取後重新計算下一次提取時間
+            // 即時模式：對每一期做守候式輪詢
+            // 開獎後 20 秒開始（首期 60 秒），每秒查一次，直到取得或逾時 66 秒（首期 120 秒）
+            const signal = { cancelled: false };
+
             const scheduleNext = () => {
-                const waitSecs = getSecondsUntilNextFetch();
+                if (signal.cancelled) return;
+
+                const waitSecs = secondsUntilNextDraw();
+                const scheduledMs = Date.now() + waitSecs * 1000;
                 setCountdown(waitSecs);
-                timerRef.current = setTimeout(() => {
-                    loadLive().then(scheduleNext);
+
+                timerRef.current = setTimeout(async () => {
+                    if (signal.cancelled) return;
+
+                    const isFirst = isFirstDrawOfDay(new Date(scheduledMs));
+                    const got = await waitForDraw(scheduledMs, latestPeriodRef.current, { isFirst, signal });
+
+                    if (signal.cancelled) return;
+
+                    if (got) {
+                        // API 的 dDate 不可用，改用該期的名目開獎時刻
+                        const draw = { ...got.draw, drawTime: taipeiDateTimeStr(new Date(scheduledMs)) };
+                        latestPeriodRef.current = draw.period;
+                        setDraws((prev) => {
+                            if (prev.some((d) => d.period === draw.period)) return prev;
+                            return [draw, ...prev];
+                        });
+                        setError(null);
+                        // 開獎號碼已就緒後才補抓 OEHL 統計，不擋主流程
+                        fetchOEHLFromKV().then((oehl) => { if (oehl) setOehlStats(oehl); });
+                    } else {
+                        setError('開獎延遲：超過正常公布時間仍未取得資料');
+                    }
+
+                    scheduleNext();
                 }, waitSecs * 1000) as unknown as ReturnType<typeof setInterval>;
             };
             scheduleNext();
@@ -309,6 +312,15 @@ export function useBingoData(): UseBingoDataReturn {
             countdownRef.current = setInterval(() => {
                 setCountdown((prev) => Math.max(prev - 1, 0));
             }, 1000);
+
+            return () => {
+                signal.cancelled = true;
+                if (timerRef.current) {
+                    clearTimeout(timerRef.current as unknown as number);
+                    clearInterval(timerRef.current);
+                }
+                if (countdownRef.current) clearInterval(countdownRef.current);
+            };
         } else {
             // CSV 模式：固定 60 秒刷新
             timerRef.current = setInterval(loadData, CSV_REFRESH_INTERVAL);

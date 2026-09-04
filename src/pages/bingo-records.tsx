@@ -190,7 +190,13 @@ export default function BingoRecords() {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                                         <span className="badge badge-neutral">{record.strategy}</span>
-                                        <span className="badge badge-success">{record.starCount} 星</span>
+                                        {(record.gameType ?? 'basic') === 'basic' ? (
+                                            <span className="badge badge-success">{record.starCount} 星</span>
+                                        ) : (
+                                            <span className="badge badge-success">
+                                                {record.gameType === 'super' ? record.numbers.length : record.sideSelections.length} 注
+                                            </span>
+                                        )}
                                         <span className="badge badge-warning">{record.betMultiplier}x</span>
                                         <span className="badge badge-neutral">{record.periodCount || 1} 期</span>
                                     </div>
@@ -213,11 +219,15 @@ export default function BingoRecords() {
                                     </div>
                                 </div>
 
-                                {/* 預測號碼 */}
+                                {/* 預測號碼（猜大小 / 猜單雙顯示投注方向） */}
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-                                    {record.numbers.map((num) => (
-                                        <div key={num} className="bingo-ball selected">{num}</div>
-                                    ))}
+                                    {record.sideSelections?.length > 0
+                                        ? record.sideSelections.map((opt) => (
+                                            <div key={opt} className="bingo-ball selected">{opt}</div>
+                                        ))
+                                        : record.numbers.map((num) => (
+                                            <div key={num} className="bingo-ball selected">{num}</div>
+                                        ))}
                                 </div>
 
                                 {/* 紀錄資訊 */}

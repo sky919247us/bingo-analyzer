@@ -4,6 +4,11 @@
  * 根據中華民國稅法：
  * - 免稅門檻：單注獎金 ≦ NT$ 5,000
  * - 超過門檻：所得稅 20% + 印花稅 0.4%
+ *
+ * ⚠ 課稅以「每一注」為單位認定。加倍投注等同於買了 N 注相同選號，
+ *   每一注各自以「基本單注獎金」與 $5,000 門檻比較，倍數不會把單注獎金推過門檻。
+ *   例：超級獎號單注 $1,200，押 10 倍中獎為 10 注 × $1,200，全額免稅（不是 1 注 $12,000）。
+ *   這也是「3星4倍10期」策略能全額免稅的原理。
  */
 
 /** 稅務常數 */
@@ -31,14 +36,18 @@ export interface TaxResult {
 }
 
 /**
- * 計算單注稅務
- * @param grossPrize - 稅前單注獎金
- * @param multiplier - 投注倍數（影響單注獎金判定）
+ * 計算稅務
+ *
+ * 課稅門檻以「基本單注獎金」認定，與倍數無關；倍數只是把注數放大 N 倍，
+ * 稅額逐注計算後再乘以 N。
+ *
+ * @param grossPrize - 稅前「基本單注」獎金（含加碼後的金額）
+ * @param multiplier - 投注倍數，等同注數
  */
 export function calculateTax(grossPrize: number, multiplier: number = 1): TaxResult {
-    // NOTE: 稅金判定以「單注獎金 × 倍數」為基準
+    // 課稅與否只看基本單注獎金，倍數不影響判定
+    const isTaxable = grossPrize > TAX_THRESHOLD;
     const totalPrize = grossPrize * multiplier;
-    const isTaxable = totalPrize > TAX_THRESHOLD;
 
     if (!isTaxable) {
         return {
@@ -52,8 +61,11 @@ export function calculateTax(grossPrize: number, multiplier: number = 1): TaxRes
         };
     }
 
-    const incomeTax = Math.floor(totalPrize * INCOME_TAX_RATE);
-    const stampTax = Math.floor(totalPrize * STAMP_TAX_RATE);
+    // 逐注計算稅額（各稅目分別無條件捨去至元），再依注數放大
+    const incomeTaxPerBet = Math.floor(grossPrize * INCOME_TAX_RATE);
+    const stampTaxPerBet = Math.floor(grossPrize * STAMP_TAX_RATE);
+    const incomeTax = incomeTaxPerBet * multiplier;
+    const stampTax = stampTaxPerBet * multiplier;
     const totalTax = incomeTax + stampTax;
     const netPrize = totalPrize - totalTax;
 

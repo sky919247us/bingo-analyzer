@@ -4,6 +4,12 @@
  */
 import type { PredictionRecord } from './bingo-storage';
 import { getPrize } from '../models/prize-table';
+import {
+    SIDE_GAME_SPECS,
+    calcCost,
+    getSideResult,
+    type SideSelection,
+} from '../models/side-games';
 
 /** 後端 API 基底 URL */
 const API_BASE = 'http://localhost:8888';
@@ -24,6 +30,8 @@ export interface SingleDrawCheckResult {
     prize: number;
     /** 是否已開獎 */
     drawn: true;
+    /** 猜大小 / 猜單雙玩法：該期的實際結果（'大'/'小'/'單'/'雙'/'和'） */
+    sideResult?: SideSelection | '和';
 }
 
 /** 尚未開獎的期 */
@@ -108,8 +116,10 @@ async function fetchDrawsByDate(date: string): Promise<Array<{
         const pageSize = 50;
 
         while (page <= 5) {
-            const url = `${TLC_HISTORY_URL}?openDate=${date}&pageNum=${page}&pageSize=${pageSize}`;
-            const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            // `_` 為防快取參數，用來繞過台彩前面的 HiNet CDN（中位數快約 46.5 秒）。
+            // 不加 Cache-Control 等自訂標頭：那不在 CORS 安全清單內，會觸發 preflight。
+            const url = `${TLC_HISTORY_URL}?openDate=${date}&pageNum=${page}&pageSize=${pageSize}&_=${Date.now()}`;
+            const resp = await fetch(url, { cache: 'no-store' });
             if (!resp.ok) break;
 
             const data = await resp.json();
@@ -170,7 +180,12 @@ async function fetchRelevantDraws(savedAtISO: string): Promise<Array<{
  */
 export async function checkRecord(record: PredictionRecord): Promise<CheckResult> {
     const periodCount = record.periodCount || 1;
-    const cost = 25 * record.betMultiplier * periodCount;
+    const gameType = record.gameType || 'basic';
+    // 注數：基本玩法固定 1 注；超級獎號依選號個數；猜大小/單雙依選項個數
+    const selectionCount = gameType === 'super'
+        ? record.numbers.length
+        : (record.sideSelections?.length ?? 0);
+    const cost = calcCost(gameType, selectionCount, record.betMultiplier, periodCount);
 
     // 取得相關的開獎資料
     const allDraws = record.savedAtISO
@@ -205,12 +220,33 @@ export async function checkRecord(record: PredictionRecord): Promise<CheckResult
 
         if (drawIdx >= 0 && drawIdx < allDraws.length) {
             const draw = allDraws[drawIdx];
-            const hitNumbers = record.numbers.filter((n) => draw.numbers.includes(n));
-            const hitCount = hitNumbers.length;
 
-            // 計算獎金（含投注倍數）
-            const basePrize = getPrize(record.starCount, hitCount, false);
-            const prize = basePrize * record.betMultiplier;
+            let hitNumbers: number[];
+            let hitCount: number;
+            let prize: number;
+            let sideResult: SideSelection | '和' | undefined;
+
+            if (gameType === 'super') {
+                // 超級獎號：只比對第 20 個獎號，複選時最多命中 1 注
+                hitNumbers = record.numbers.filter((n) => n === draw.superNumber);
+                hitCount = hitNumbers.length;
+                prize = hitCount > 0
+                    ? SIDE_GAME_SPECS.super.unitPrize * record.betMultiplier
+                    : 0;
+            } else if (gameType === 'bigSmall' || gameType === 'oddEven') {
+                // 猜大小 / 猜單雙：和局時兩邊皆不中獎
+                sideResult = getSideResult(gameType, draw.numbers);
+                const hit = sideResult !== '和' && record.sideSelections.includes(sideResult);
+                hitNumbers = [];
+                hitCount = hit ? 1 : 0;
+                prize = hit
+                    ? SIDE_GAME_SPECS[gameType].unitPrize * record.betMultiplier
+                    : 0;
+            } else {
+                hitNumbers = record.numbers.filter((n) => draw.numbers.includes(n));
+                hitCount = hitNumbers.length;
+                prize = getPrize(record.starCount, hitCount, false) * record.betMultiplier;
+            }
 
             drawResults.push({
                 period: draw.period,
@@ -220,6 +256,7 @@ export async function checkRecord(record: PredictionRecord): Promise<CheckResult
                 hitCount,
                 prize,
                 drawn: true,
+                sideResult,
             });
 
             totalPrize += prize;

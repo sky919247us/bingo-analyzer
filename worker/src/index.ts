@@ -7,6 +7,24 @@ const TLC_OEHL_URL = 'https://api.taiwanlottery.com/TLCAPIWeB/Lottery/OEHLStatis
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
+/**
+ * 台彩 API 前面掛了 HiNet CDN，不繞過的話中位數會慢約 46.5 秒。
+ * 在網址後面加一個每次都不同的 `_` 參數即可讓 CDN 視為不同物件而回源
+ * （驗證方式：看回應的 X-Cache 是 `MISS, MISS, MISS` 還是 `HIT`）。
+ * 三支 API（BingoResult / LatestBingoResult / OEHLStatistic）皆適用。
+ */
+function noCacheUrl(url: string): string {
+    return url + (url.includes('?') ? '&' : '?') + '_=' + Date.now();
+}
+
+/** 伺服器端沒有 CORS preflight 顧慮，可以直接加不快取標頭 */
+const NO_CACHE_HEADERS = {
+    'Accept': 'application/json',
+    'User-Agent': UA,
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
+};
+
 // 允許跨域請求的 Headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,9 +35,7 @@ const corsHeaders = {
 
 /** 從 LatestBingoResult 取得最新一期開獎號碼 */
 async function fetchLatestFromTLC(): Promise<any> {
-    const resp = await fetch(TLC_LATEST_URL, {
-        headers: { 'Accept': 'application/json', 'User-Agent': UA },
-    });
+    const resp = await fetch(noCacheUrl(TLC_LATEST_URL), { headers: NO_CACHE_HEADERS });
     if (!resp.ok) throw new Error(`TLC API Error: ${resp.status}`);
     const data: any = await resp.json();
     if (data.rtCode !== 0) throw new Error(`TLC API rtCode: ${data.rtCode}`);
@@ -36,9 +52,7 @@ async function fetchLatestFromTLC(): Promise<any> {
 
 /** 從 OEHLStatistic 取得大小單雙即時統計（此 API 更新速度最快） */
 async function fetchOEHLStatistic(): Promise<any> {
-    const resp = await fetch(TLC_OEHL_URL, {
-        headers: { 'Accept': 'application/json', 'User-Agent': UA },
-    });
+    const resp = await fetch(noCacheUrl(TLC_OEHL_URL), { headers: NO_CACHE_HEADERS });
     if (!resp.ok) throw new Error(`OEHL API Error: ${resp.status}`);
     const data: any = await resp.json();
     if (data.rtCode !== 0) throw new Error(`OEHL API rtCode: ${data.rtCode}`);
@@ -48,7 +62,7 @@ async function fetchOEHLStatistic(): Promise<any> {
 /** 從 BingoResult 歷史查詢 API 取得指定日期的開獎紀錄 */
 async function fetchHistoryPageFromTLC(dateStr: string, page: number = 1): Promise<{ totalSize: number, draws: any[] }> {
     const url = `https://api.taiwanlottery.com/TLCAPIWeB/Lottery/BingoResult?openDate=${dateStr}&pageNum=${page}&pageSize=50`;
-    const resp = await fetch(url, { headers: { 'Accept': 'application/json', 'User-Agent': UA } });
+    const resp = await fetch(noCacheUrl(url), { headers: NO_CACHE_HEADERS });
     if (!resp.ok) throw new Error(`TLC History API Error: ${resp.status}`);
     const data: any = await resp.json();
     if (data.rtCode !== 0) throw new Error(`TLC History API rtCode: ${data.rtCode}`);
