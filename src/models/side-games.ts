@@ -195,3 +195,251 @@ export function summarizeSuperHistory(superNumbers: number[]): Map<number, numbe
     }
     return map;
 }
+
+/* ========================================================================
+ * 超級獎號分析
+ * ====================================================================== */
+
+/** 依出現次數分組的結果（同次數的號碼並列） */
+export interface SuperCountGroup {
+    /** 出現次數 */
+    count: number;
+    /** 該次數的所有號碼（由小到大） */
+    numbers: number[];
+}
+
+export interface SuperAnalysis {
+    /** 樣本期數 */
+    totalPeriods: number;
+    /** 有開出過的號碼，依次數由多到少分組（同次數並列） */
+    groups: SuperCountGroup[];
+    /** 從未開出的號碼 */
+    never: number[];
+    /** 每個號碼的出現次數（1~80 皆有值） */
+    freq: Map<number, number>;
+}
+
+/**
+ * 超級獎號完整分析：依出現次數分組 + 從未開出清單
+ *
+ * 用分組而非「前五名」，是因為快開型彩券的樣本裡大量號碼會並列同一次數，
+ * 直接取前五名會武斷地切斷並列，看起來像是那五個特別熱。
+ */
+export function analyzeSuperNumbers(superNumbers: number[]): SuperAnalysis {
+    const freq = new Map<number, number>();
+    for (let n = 1; n <= 80; n++) freq.set(n, 0);
+
+    let totalPeriods = 0;
+    for (const n of superNumbers) {
+        totalPeriods += 1;
+        if (!n || n < 1 || n > 80) continue;
+        freq.set(n, (freq.get(n) ?? 0) + 1);
+    }
+
+    const byCount = new Map<number, number[]>();
+    const never: number[] = [];
+    for (let n = 1; n <= 80; n++) {
+        const c = freq.get(n) ?? 0;
+        if (c === 0) { never.push(n); continue; }
+        if (!byCount.has(c)) byCount.set(c, []);
+        byCount.get(c)!.push(n);
+    }
+
+    const groups: SuperCountGroup[] = [...byCount.entries()]
+        .map(([count, numbers]) => ({ count, numbers: numbers.sort((a, b) => a - b) }))
+        .sort((a, b) => b.count - a.count);
+
+    return { totalPeriods, groups, never, freq };
+}
+
+/* ========================================================================
+ * 回測 / 模擬引擎
+ * ====================================================================== */
+
+/** 回測輸入：任何帶有 numbers 與 superNumber 的開獎資料 */
+export interface DrawLike {
+    numbers: number[];
+    superNumber: number;
+}
+
+/** 單期回測結果 */
+export interface SidePeriodResult {
+    /** 該期的實際結果（超級獎號玩法為開出的號碼） */
+    outcome: string;
+    /** 是否中獎 */
+    win: boolean;
+    /** 該期獎金（含注數與倍數，稅前） */
+    prize: number;
+    /** 該期成本 */
+    cost: number;
+}
+
+/** 回測總結 */
+export interface SideBacktestResult {
+    periods: SidePeriodResult[];
+    totalPeriods: number;
+    /** 中獎期數 */
+    winCount: number;
+    /** 和局期數（僅猜大小 / 猜單雙有意義） */
+    tieCount: number;
+    winRate: number;
+    totalPrize: number;
+    totalCost: number;
+    netProfit: number;
+    /** 實際回報率 = 總獎金 / 總成本 */
+    returnRate: number;
+    /** 最長連續未中期數 */
+    maxMissStreak: number;
+    /** 資金曲線（累積損益） */
+    profitCurve: number[];
+}
+
+/**
+ * 回測附加玩法
+ *
+ * @param draws       開獎資料（順序即為投注順序）
+ * @param gameType    玩法
+ * @param selections  猜大小 / 猜單雙的投注方向；超級獎號玩法請用 superPicks
+ * @param superPicks  超級獎號的預測號碼
+ * @param multiplier  投注倍數
+ */
+export function backtestSideGame(
+    draws: DrawLike[],
+    gameType: Exclude<GameType, 'basic'>,
+    opts: { selections?: SideSelection[]; superPicks?: number[]; multiplier?: number } = {},
+): SideBacktestResult {
+    const multiplier = opts.multiplier ?? 1;
+    const selections = opts.selections ?? [];
+    const superPicks = opts.superPicks ?? [];
+    const spec = SIDE_GAME_SPECS[gameType];
+
+    const betCount = gameType === 'super' ? superPicks.length : selections.length;
+    const costPerPeriod = BASE_BET * betCount * multiplier;
+
+    const periods: SidePeriodResult[] = [];
+    const profitCurve: number[] = [];
+    let cumulative = 0;
+    let winCount = 0;
+    let tieCount = 0;
+    let missStreak = 0;
+    let maxMissStreak = 0;
+
+    for (const d of draws) {
+        let win = false;
+        let outcome: string;
+
+        if (gameType === 'super') {
+            outcome = String(d.superNumber);
+            win = superPicks.includes(d.superNumber);
+        } else {
+            const r = getSideResult(gameType, d.numbers);
+            outcome = r;
+            if (r === '和') tieCount += 1;
+            else win = selections.includes(r);
+        }
+
+        // 超級獎號複選時最多命中 1 注；大小單雙同押兩邊也只有一邊會中
+        const prize = win ? spec.unitPrize * multiplier : 0;
+        cumulative += prize - costPerPeriod;
+
+        if (win) {
+            winCount += 1;
+            if (missStreak > maxMissStreak) maxMissStreak = missStreak;
+            missStreak = 0;
+        } else {
+            missStreak += 1;
+        }
+
+        periods.push({ outcome, win, prize, cost: costPerPeriod });
+        profitCurve.push(cumulative);
+    }
+
+    if (missStreak > maxMissStreak) maxMissStreak = missStreak;
+
+    const totalPeriods = draws.length;
+    const totalPrize = periods.reduce((s, p) => s + p.prize, 0);
+    const totalCost = costPerPeriod * totalPeriods;
+
+    return {
+        periods,
+        totalPeriods,
+        winCount,
+        tieCount,
+        winRate: totalPeriods > 0 ? winCount / totalPeriods : 0,
+        totalPrize,
+        totalCost,
+        netProfit: totalPrize - totalCost,
+        returnRate: totalCost > 0 ? totalPrize / totalCost : 0,
+        maxMissStreak,
+    profitCurve,
+    };
+}
+
+/**
+ * 蒙地卡羅模擬：用理論機率隨機產生開獎結果
+ * 與回測的差別是不吃歷史資料，而是直接依機率抽樣
+ */
+export function simulateSideGame(
+    gameType: Exclude<GameType, 'basic'>,
+    periodCount: number,
+    opts: { betCount?: number; multiplier?: number; rng?: () => number } = {},
+): SideBacktestResult {
+    const rng = opts.rng ?? Math.random;
+    const multiplier = opts.multiplier ?? 1;
+    const betCount = opts.betCount ?? 1;
+    const spec = SIDE_GAME_SPECS[gameType];
+
+    // 每期中獎機率：超級獎號選 k 個即 k/80；大小單雙押 k 邊即 k × 9.80%
+    const winProb = gameType === 'super'
+        ? Math.min(1, betCount / 80)
+        : Math.min(1, betCount * SIDE_WIN_PROBABILITY);
+
+    const costPerPeriod = BASE_BET * betCount * multiplier;
+    const periods: SidePeriodResult[] = [];
+    const profitCurve: number[] = [];
+    let cumulative = 0;
+    let winCount = 0;
+    let tieCount = 0;
+    let missStreak = 0;
+    let maxMissStreak = 0;
+
+    for (let i = 0; i < periodCount; i++) {
+        const roll = rng();
+        const win = roll < winProb;
+        // 和局：大小單雙在「沒中且落在和局區間」時計入
+        if (gameType !== 'super' && !win && roll >= 1 - SIDE_TIE_PROBABILITY) tieCount += 1;
+
+        const prize = win ? spec.unitPrize * multiplier : 0;
+        cumulative += prize - costPerPeriod;
+
+        if (win) {
+            winCount += 1;
+            if (missStreak > maxMissStreak) maxMissStreak = missStreak;
+            missStreak = 0;
+        } else {
+            missStreak += 1;
+        }
+
+        periods.push({ outcome: win ? '中' : '未中', win, prize, cost: costPerPeriod });
+        profitCurve.push(cumulative);
+    }
+
+    if (missStreak > maxMissStreak) maxMissStreak = missStreak;
+
+    const totalPrize = periods.reduce((s, p) => s + p.prize, 0);
+    const totalCost = costPerPeriod * periodCount;
+
+    return {
+        periods,
+        totalPeriods: periodCount,
+        winCount,
+        tieCount,
+        winRate: periodCount > 0 ? winCount / periodCount : 0,
+        totalPrize,
+        totalCost,
+        netProfit: totalPrize - totalCost,
+        returnRate: totalCost > 0 ? totalPrize / totalCost : 0,
+        maxMissStreak,
+        profitCurve,
+    };
+}

@@ -10,6 +10,14 @@ import {
 } from 'recharts';
 import { hypergeometricProbability } from '../models/probability';
 import { getPrize } from '../models/prize-table';
+import {
+    BASE_BET,
+    SIDE_GAME_SPECS,
+    SIDE_WIN_PROBABILITY,
+    SUPER_MAX_PICKS,
+    expectedReturnRate,
+    type GameType,
+} from '../models/side-games';
 
 interface SimulationRun {
     curve: { period: number; balance: number }[];
@@ -18,6 +26,14 @@ interface SimulationRun {
     minBalance: number;
     busted: boolean;
 }
+
+/** 玩法選單 */
+const GAME_TABS: Array<{ type: GameType; icon: string; label: string }> = [
+    { type: 'basic', icon: '⭐', label: '基本玩法' },
+    { type: 'super', icon: '🎯', label: '超級獎號' },
+    { type: 'bigSmall', icon: '⚖️', label: '猜大小' },
+    { type: 'oddEven', icon: '🔢', label: '猜單雙' },
+];
 
 export default function Simulation() {
     useSeo({ title: '蒙地卡羅模擬', description: '利用蒙地卡羅隨機演算法，預演長時間投注下各種資金池與風險管控測試。', keywords: '蒙地卡羅, 資金管控' });
@@ -30,6 +46,10 @@ export default function Simulation() {
     const [stopWin, setStopWin] = useState(50000);
     const [simCount, setSimCount] = useState(100);
     const [running, setRunning] = useState(false);
+
+    /* 附加玩法：蒙地卡羅只取決於「注數」，不取決於選了哪些號碼 */
+    const [gameType, setGameType] = useState<GameType>('basic');
+    const [sideBetCount, setSideBetCount] = useState(1);
     const [result, setResult] = useState<{
         runs: SimulationRun[];
         bustRate: number;
@@ -45,27 +65,40 @@ export default function Simulation() {
 
         // 使用 setTimeout 讓 UI 更新
         setTimeout(() => {
-            const betCost = 25 * multiplier;
+            // 注數：基本玩法固定 1 注；附加玩法依選擇個數（超級獎號選 k 個 = k 注）
+            const betCount = gameType === 'basic' ? 1 : sideBetCount;
+            const betCost = BASE_BET * betCount * multiplier;
 
-            // 預先計算各命中數的機率與獎金
-            const outcomes: { probability: number; prize: number }[] = [];
-            const maxHit = Math.min(star, 20);
-            let cumProb = 0;
-            for (let h = 0; h <= maxHit; h++) {
-                const prob = hypergeometricProbability(star, h);
-                const prize = getPrize(star, h, isPromo) * multiplier;
-                if (prob > 1e-10) {
-                    outcomes.push({ probability: prob, prize });
-                    cumProb += prob;
-                }
-            }
-
-            // 建立累積機率陣列（用於快速抽樣）
             const cdf: { cumProb: number; prize: number }[] = [];
-            let acc = 0;
-            for (const o of outcomes) {
-                acc += o.probability;
-                cdf.push({ cumProb: acc, prize: o.prize });
+
+            if (gameType === 'basic') {
+                // 預先計算各命中數的機率與獎金
+                const outcomes: { probability: number; prize: number }[] = [];
+                const maxHit = Math.min(star, 20);
+                for (let h = 0; h <= maxHit; h++) {
+                    const prob = hypergeometricProbability(star, h);
+                    const prize = getPrize(star, h, isPromo) * multiplier;
+                    if (prob > 1e-10) {
+                        outcomes.push({ probability: prob, prize });
+                    }
+                }
+
+                // 建立累積機率陣列（用於快速抽樣）
+                let acc = 0;
+                for (const o of outcomes) {
+                    acc += o.probability;
+                    cdf.push({ cumProb: acc, prize: o.prize });
+                }
+            } else {
+                // 附加玩法只有「中」與「不中」兩種結果：
+                // 超級獎號選 k 個 → k/80；猜大小 / 猜單雙押 k 邊 → k × 9.804%
+                // （複選最多只會中一注，所以獎金不隨注數放大，但成本會）
+                const winProb = gameType === 'super'
+                    ? Math.min(1, betCount / 80)
+                    : Math.min(1, betCount * SIDE_WIN_PROBABILITY);
+                const prize = SIDE_GAME_SPECS[gameType].unitPrize * multiplier;
+                cdf.push({ cumProb: winProb, prize });
+                cdf.push({ cumProb: 1, prize: 0 });
             }
 
             // 執行模擬
@@ -131,7 +164,7 @@ export default function Simulation() {
 
             setRunning(false);
         }, 50);
-    }, [star, multiplier, isPromo, initialCapital, periods, stopLoss, stopWin, simCount]);
+    }, [gameType, sideBetCount, star, multiplier, isPromo, initialCapital, periods, stopLoss, stopWin, simCount]);
 
     // 圖表資料：取前 20 條模擬的資金曲線
     const chartData = useMemo(() => {
@@ -171,7 +204,47 @@ export default function Simulation() {
             {/* 控制面板 */}
             <div className="glass-card" style={{ marginBottom: 'var(--space-xl)' }}>
                 <h2 className="section-title">⚙️ 模擬參數</h2>
+
+                {/* 玩法選擇 */}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 'var(--space-md)' }}>
+                    {GAME_TABS.map((g) => (
+                        <button
+                            key={g.type}
+                            className={`strategy-btn${gameType === g.type ? ' selected' : ''}`}
+                            onClick={() => { setGameType(g.type); setSideBetCount(1); setResult(null); }}
+                        >
+                            <span>{g.icon}</span>
+                            <span>{g.label}</span>
+                        </button>
+                    ))}
+                </div>
+
+                {gameType !== 'basic' && (
+                    <div style={{ marginBottom: 'var(--space-md)', padding: '12px 16px', background: 'var(--bg-page)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
+                        <div className="input-group" style={{ marginBottom: 8 }}>
+                            <label>{gameType === 'super' ? '選號個數（= 注數）' : '投注方向數（= 注數）'}</label>
+                            <select
+                                className="input-field"
+                                value={sideBetCount}
+                                onChange={(e) => { setSideBetCount(Number(e.target.value)); setResult(null); }}
+                            >
+                                {Array.from({ length: gameType === 'super' ? SUPER_MAX_PICKS : 2 }, (_, i) => i + 1).map((n) => (
+                                    <option key={n} value={n}>{n} 注</option>
+                                ))}
+                            </select>
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                            蒙地卡羅只取決於<strong>注數</strong>，不取決於你選了哪幾個號碼——
+                            每個號碼機率相同，選 25 號或 63 號的模擬結果在統計上完全一致。
+                            單注獎金 ${SIDE_GAME_SPECS[gameType].unitPrize.toLocaleString()}
+                            ．每期成本 ${(BASE_BET * sideBetCount * multiplier).toLocaleString()}
+                            ．理論回報率 {(expectedReturnRate(gameType) * 100).toFixed(2)}%
+                            {gameType !== 'super' && `．和局率 80.39%`}
+                        </p>
+                    </div>
+                )}
                 <div className="control-row">
+                    {gameType === 'basic' && (
                     <div className="input-group">
                         <label>星數</label>
                         <select className="input-field" value={star} onChange={(e) => setStar(Number(e.target.value))}>
@@ -180,6 +253,7 @@ export default function Simulation() {
                             ))}
                         </select>
                     </div>
+                    )}
 
                     <div className="input-group">
                         <label>倍數</label>
@@ -244,12 +318,14 @@ export default function Simulation() {
                         />
                     </div>
 
+                    {gameType === 'basic' && (
                     <div className="toggle-switch" onClick={() => setIsPromo((v) => !v)}>
                         <div className={`toggle-track ${isPromo ? 'active' : ''}`}>
                             <div className="toggle-thumb" />
                         </div>
                         <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>加碼</span>
                     </div>
+                    )}
 
                     <button
                         className="btn btn-primary"
@@ -356,8 +432,10 @@ export default function Simulation() {
                             <div style={{ padding: 'var(--space-md)', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-md)' }}>
                                 <strong style={{ color: 'var(--accent-cyan)' }}>策略組合：</strong>
                                 <span style={{ marginLeft: 'var(--space-sm)' }}>
-                                    {star}星 × {multiplier}倍 {isPromo ? '(加碼)' : '(常態)'}，
-                                    單期成本 ${25 * multiplier}，初始本金 ${initialCapital.toLocaleString()}
+                                    {gameType === 'basic'
+                                        ? `${star}星 × ${multiplier}倍 ${isPromo ? '(加碼)' : '(常態)'}`
+                                        : `${SIDE_GAME_SPECS[gameType].label} ${sideBetCount}注 × ${multiplier}倍`}，
+                                    單期成本 ${(BASE_BET * (gameType === 'basic' ? 1 : sideBetCount) * multiplier).toLocaleString()}，初始本金 ${initialCapital.toLocaleString()}
                                 </span>
                             </div>
                             <div style={{ padding: 'var(--space-md)', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-md)' }}>

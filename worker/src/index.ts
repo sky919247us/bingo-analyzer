@@ -133,6 +133,36 @@ function fillMissingTimes(draws: any[], oehlTimeMap?: Map<string, string>) {
     });
 }
 
+/**
+ * today_draws 的儲存格式：{ updatedAt, draws: [...] }
+ *
+ * 這樣做的目的是砍掉 KV 寫入次數（免費方案每日 1,000 次寫入）：
+ * - 原本的 `latest_draw` 是 `today_draws[0]` 的複本，純冗餘 → 移除
+ * - 原本的 `last_updated` 是獨立的 key，每次觸發都要寫一次 → 併進本結構
+ * 每期由 4 次寫入降為 1 次（每日約 816 → 約 203），
+ * 讀取端也從「2 次 get」降為「1 次 get」。
+ */
+interface TodayPayload {
+    updatedAt: string | null;
+    draws: any[];
+}
+
+/** 讀取今日資料；相容舊格式（純陣列） */
+async function readToday(env: Env): Promise<TodayPayload> {
+    const raw = await env.BINGO_KV.get('today_draws');
+    if (!raw) return { updatedAt: null, draws: [] };
+    const parsed = JSON.parse(raw);
+    // 舊格式是直接存陣列，新格式是 { updatedAt, draws }
+    if (Array.isArray(parsed)) return { updatedAt: null, draws: parsed };
+    return { updatedAt: parsed.updatedAt ?? null, draws: parsed.draws ?? [] };
+}
+
+/** 寫入今日資料（單一次寫入，含更新時間） */
+async function writeToday(env: Env, draws: any[]): Promise<void> {
+    const payload: TodayPayload = { updatedAt: new Date().toISOString(), draws };
+    await env.BINGO_KV.put('today_draws', JSON.stringify(payload));
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -140,25 +170,23 @@ export default {
 
     try {
         if (url.pathname === '/api/kv/latest') {
-            const rawLatest = await env.BINGO_KV.get('latest_draw');
-            const lastUpdated = await env.BINGO_KV.get('last_updated');
-            return new Response(JSON.stringify({ success: true, draw: rawLatest ? JSON.parse(rawLatest) : null, lastUpdated }), { headers: corsHeaders });
+            // latest_draw 已移除（它就是 today_draws[0]，屬冗餘寫入）
+            const { draws, updatedAt } = await readToday(env);
+            return new Response(JSON.stringify({ success: true, draw: draws[0] ?? null, lastUpdated: updatedAt }), { headers: corsHeaders });
         }
         if (url.pathname === '/api/kv/today') {
-            const rawToday = await env.BINGO_KV.get('today_draws');
-            const lastUpdated = await env.BINGO_KV.get('last_updated');
-            const draws = rawToday ? JSON.parse(rawToday) : [];
-            return new Response(JSON.stringify({ success: true, draws, count: draws.length, lastUpdated }), { headers: corsHeaders });
+            const { draws, updatedAt } = await readToday(env);
+            return new Response(JSON.stringify({ success: true, draws, count: draws.length, lastUpdated: updatedAt }), { headers: corsHeaders });
         }
         if (url.pathname === '/api/kv/oehl') {
             const rawOehl = await env.BINGO_KV.get('oehl_stats');
-            const lastUpdated = await env.BINGO_KV.get('last_updated');
-            return new Response(JSON.stringify({ success: true, oehl: rawOehl ? JSON.parse(rawOehl) : null, lastUpdated }), { headers: corsHeaders });
+            const oehl = rawOehl ? JSON.parse(rawOehl) : null;
+            return new Response(JSON.stringify({ success: true, oehl: oehl?.data ?? oehl, lastUpdated: oehl?.updatedAt ?? null }), { headers: corsHeaders });
         }
         if (url.pathname === '/api/kv/force-update') {
             await syncDrawsToKV(env, true);
-            const lastUpdated = await env.BINGO_KV.get('last_updated');
-            return new Response(JSON.stringify({ success: true, message: 'Forced update success.', lastUpdated }), { headers: corsHeaders });
+            const { updatedAt } = await readToday(env);
+            return new Response(JSON.stringify({ success: true, message: 'Forced update success.', lastUpdated: updatedAt }), { headers: corsHeaders });
         }
         return new Response(JSON.stringify({ error: 'Not Found' }), { status: 404, headers: corsHeaders });
     } catch (err: any) {
@@ -218,18 +246,17 @@ async function syncDrawsToKV(env: Env, skipRetry: boolean = false) {
       const savedDate = await env.BINGO_KV.get('today_date');
       if (savedDate !== todayDateStr) {
           await env.BINGO_KV.put('today_date', todayDateStr);
-          await env.BINGO_KV.put('today_draws', JSON.stringify([]));
+          await writeToday(env, []);
       }
 
       // 非開獎時段只做換日，不抓新資料
+      // （不再無條件寫 last_updated —— 那是每日約 204 次的純浪費寫入）
       if (!isDrawTime) {
           console.log(`[syncDrawsToKV] 非開獎時段 (台灣 ${taipeiHour}:${String(taipeiMinute).padStart(2, '0')})，僅執行換日檢查`);
-          await env.BINGO_KV.put('last_updated', new Date().toISOString());
           return;
       }
 
-      const rawToday = await env.BINGO_KV.get('today_draws');
-      let todayDraws: any[] = rawToday ? JSON.parse(rawToday) : [];
+      let todayDraws: any[] = (await readToday(env)).draws;
       const currentLatestPeriod = todayDraws.length > 0
           ? todayDraws.reduce((max, d) => Number(d.period) > Number(max.period) ? d : max).period
           : null;
@@ -268,9 +295,12 @@ async function syncDrawsToKV(env: Env, skipRetry: boolean = false) {
           }
       }
 
-      // 儲存 OEHL 大小單雙統計到 KV
+      // 儲存 OEHL 大小單雙統計到 KV（包一層 updatedAt，省掉獨立的 last_updated key）
       if (oehlData) {
-          await env.BINGO_KV.put('oehl_stats', JSON.stringify(oehlData));
+          await env.BINGO_KV.put('oehl_stats', JSON.stringify({
+              updatedAt: new Date().toISOString(),
+              data: oehlData,
+          }));
       }
 
       // === 第二階段：取得開獎號碼（LatestBingoResult + History） ===
@@ -360,12 +390,11 @@ async function syncDrawsToKV(env: Env, skipRetry: boolean = false) {
           isUpdated = true;
       }
 
+      // 只在真的有更新時寫入，且只寫這一個 key（updatedAt 已含在其中）
       if (isUpdated) {
           todayDraws.sort((a, b) => Number(b.period) - Number(a.period));
-          await env.BINGO_KV.put('today_draws', JSON.stringify(todayDraws));
-          await env.BINGO_KV.put('latest_draw', JSON.stringify(todayDraws[0]));
+          await writeToday(env, todayDraws);
       }
-      await env.BINGO_KV.put('last_updated', new Date().toISOString());
       console.log(`[syncDrawsToKV] 同步完成，日期=${todayDateStr}，筆數=${todayDraws.length}，已更新=${isUpdated}，OEHL最新=${oehlLatestPeriod}`);
     } catch (err) {
       console.error('[syncDrawsToKV] 同步失敗:', err);

@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import { useBingoData } from '../hooks/useBingoData';
 import { calculateFrequency, calculateGaps } from '../utils/bingo-strategies';
+import { analyzeSuperNumbers } from '../models/side-games';
 
 type FilterMode = 'all' | 'hot20' | 'cold20';
 
@@ -59,25 +60,13 @@ export default function BingoStatistics() {
     }, [frequencyData]);
 
     /** 超級獎號次數統計 */
-    const superData = useMemo(() => {
-        if (draws.length === 0) return { hottest: [], coldest: [] };
-        const freq: Record<number, number> = {};
-        for (let i = 1; i <= 80; i++) freq[i] = 0;
-        
-        draws.forEach(d => {
-            if (d.superNumber) {
-                freq[d.superNumber] = (freq[d.superNumber] || 0) + 1;
-            }
-        });
+    const superData = useMemo(() => analyzeSuperNumbers(draws.map((d) => d.superNumber)), [draws]);
 
-        const sorted = Object.entries(freq)
-            .map(([num, count]) => ({ number: parseInt(num), count }))
-            .sort((a, b) => b.count - a.count);
-            
-        return {
-            hottest: sorted.slice(0, 5).filter(s => s.count > 0),    
-            coldest: sorted.slice(-5)
-        };
+    /** 樣本的期數範圍（由舊到新） */
+    const periodRange = useMemo(() => {
+        if (draws.length === 0) return null;
+        const sorted = [...draws].sort((a, b) => Number(a.period) - Number(b.period));
+        return { first: sorted[0].period, last: sorted[sorted.length - 1].period };
     }, [draws]);
 
     /** 尾數 (0-9) 分佈統計 */
@@ -314,31 +303,80 @@ export default function BingoStatistics() {
                             <span className="bingo-ball super" style={{ width: 24, height: 24, fontSize: '0.8rem' }}>S</span>
                             超級獎號分析
                         </h3>
+                        {/* 樣本摘要 */}
+                        {periodRange && (
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: -4, marginBottom: 14 }}>
+                                樣本共 <strong style={{ color: 'var(--text-main)' }}>{superData.totalPeriods}</strong> 期
+                                （第 {periodRange.first} 期 ～ 第 {periodRange.last} 期）
+                                ．理論上每個號碼的期望出現次數為 <strong>{(superData.totalPeriods / 80).toFixed(2)}</strong> 次
+                            </p>
+                        )}
+
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                            {/* 第一行：熱門 */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                                <h4 style={{ fontSize: '0.9rem', color: 'var(--success)', margin: 0, whiteSpace: 'nowrap' }}>🔥 熱門</h4>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                                    {superData.hottest.map((d) => (
-                                        <div key={d.number} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-page)', padding: '6px 12px', borderRadius: 'var(--radius-sm)' }}>
-                                            <div className="bingo-ball super" style={{ width: 30, height: 30, fontSize: '0.9rem' }}>{d.number}</div>
-                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{d.count}次</span>
+                            {/* 熱門：依出現次數分組，同次數並列 */}
+                            <div>
+                                <h4 style={{ fontSize: '0.9rem', color: 'var(--success)', margin: '0 0 10px' }}>
+                                    🔥 已開出號碼（依次數分組，同次數並列）
+                                </h4>
+                                {superData.groups.length === 0 && (
+                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>尚無資料</p>
+                                )}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                    {superData.groups.map((g, idx) => (
+                                        <div key={g.count} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
+                                            <span
+                                                className="badge badge-success"
+                                                style={{ whiteSpace: 'nowrap', minWidth: 118, textAlign: 'center' }}
+                                            >
+                                                並列第 {idx + 1} ・各 {g.count} 次
+                                            </span>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, flex: 1 }}>
+                                                {g.numbers.map((n) => (
+                                                    <div
+                                                        key={n}
+                                                        className="bingo-ball super"
+                                                        style={{ width: 30, height: 30, fontSize: '0.85rem' }}
+                                                        title={`${n} 號：${g.count} 次`}
+                                                    >
+                                                        {n}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                                                {g.numbers.length} 個
+                                            </span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                            {/* 第二行：冷門 */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                                <h4 style={{ fontSize: '0.9rem', color: 'var(--danger)', margin: 0, whiteSpace: 'nowrap' }}>🧊 冷門</h4>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                                    {superData.coldest.map((d) => (
-                                        <div key={d.number} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-page)', padding: '6px 12px', borderRadius: 'var(--radius-sm)' }}>
-                                            <div className="bingo-ball" style={{ width: 30, height: 30, fontSize: '0.9rem', filter: 'grayscale(1)' }}>{d.number}</div>
-                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{d.count}次</span>
+
+                            {/* 冷門：從未開出 */}
+                            <div>
+                                <h4 style={{ fontSize: '0.9rem', color: 'var(--danger)', margin: '0 0 10px' }}>
+                                    🧊 從未開出（共 {superData.never.length} 個）
+                                </h4>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                    {superData.never.map((n) => (
+                                        <div
+                                            key={n}
+                                            className="bingo-ball"
+                                            style={{ width: 30, height: 30, fontSize: '0.85rem', filter: 'grayscale(1)', opacity: 0.65 }}
+                                        >
+                                            {n}
                                         </div>
                                     ))}
                                 </div>
+                                {superData.never.length === 0 && (
+                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>本區間內 80 個號碼全數開出過</p>
+                                )}
                             </div>
+
+                            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, paddingTop: 4, borderTop: '1px solid var(--border-light)' }}>
+                                ⚠ 超級獎號每期中獎率固定為 1/80，各期互相獨立。
+                                上面的冷熱分布是<strong>已發生的抽樣結果</strong>，
+                                在 {superData.totalPeriods} 期的樣本下本來就會有號碼開 3~4 次、也會有三成以上從未開出，
+                                這是隨機性的正常表現，<strong>不代表任何號碼下一期比較容易開出</strong>。
+                            </p>
                         </div>
                     </div>
 
