@@ -1,0 +1,93 @@
+/* ============================================
+ * 玩法教學頁 (bingo-guide) 專用樣式
+ * class 一律加 guide- 前綴，避免與全域樣式衝突
+ * ============================================ */
+
+.guide-section {
+  margin-bottom: var(--space-xl);
+}
+
+.guide-section p {
+  color: var(--text-main);
+  line-height: 1.8;
+  margin-bottom: var(--space-sm);
+}
+
+.guide-lead {
+  font-size: 1rem;
+  color: var(--text-muted);
+  line-height: 1.8;
+  margin-bottom: var(--space-lg);
+}
+
+.guide-term-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-md);
+}
+
+.guide-term-card {
+  background: var(--bg-page);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
+.guide-term-card h4 {
+  color: var(--primary);
+  font-weight: 700;
+  margin-bottom: var(--space-xs);
+}
+
+.guide-term-card p {
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+.guide-faq-item {
+  border-bottom: 1px solid var(--border-light);
+  padding: var(--space-md) 0;
+}
+
+.guide-faq-item:last-child {
+  border-bottom: none;
+}
+
+.guide-faq-item h4 {
+  color: var(--primary);
+  margin-bottom: var(--space-xs);
+}
+
+.guide-disclaimer {
+  background: rgba(211, 47, 47, 0.06);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  color: var(--text-main);
+}
+
+.guide-disclaimer strong {
+  color: var(--danger);
+}
+
+.guide-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.guide-toc a {
+  background: var(--bg-page);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 4px 12px;
+  font-size: 0.85rem;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.guide-toc a:hover {
+  background: var(--primary);
+  color: var(--text-inverse);
+}

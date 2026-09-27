@@ -1,0 +1,156 @@
+/* ============================================
+ * 組合分析頁 — 專屬樣式（class 一律加 combo- 前綴）
+ * ============================================ */
+
+.combo-section {
+    margin-bottom: 20px;
+}
+
+.combo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.combo-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: var(--bg-page);
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    border-left: 4px solid var(--primary);
+    flex-wrap: wrap;
+}
+
+.combo-row-balls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.combo-row-count {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--success);
+    white-space: nowrap;
+}
+
+.combo-row-count.cold {
+    color: var(--danger);
+}
+
+/* 80 碼熱力圖網格：手機寬度也不可橫向爆版，採自適應欄數 */
+.combo-heatgrid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 6px;
+}
+
+@media (max-width: 480px) {
+    .combo-heatgrid {
+        grid-template-columns: repeat(8, 1fr);
+        gap: 4px;
+    }
+}
+
+.combo-heat-cell {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid var(--border-light);
+    transition: transform var(--transition-fast);
+    color: #FFFFFF;
+    min-width: 0;
+}
+
+.combo-heat-cell:hover,
+.combo-heat-cell:focus-visible {
+    transform: scale(1.08);
+    outline: none;
+}
+
+.combo-heat-cell.selected {
+    box-shadow: 0 0 0 2px var(--primary);
+}
+
+/* 5 色階，淺色/深色主題皆維持固定飽和色，確保可讀性 */
+.combo-heat-cell.tier-extreme-hot { background: #D32F2F; }
+.combo-heat-cell.tier-hot { background: #F39C12; color: #0B192C; }
+.combo-heat-cell.tier-medium { background: #60A5FA; color: #0B192C; }
+.combo-heat-cell.tier-cold { background: #3B5F82; }
+.combo-heat-cell.tier-extreme-cold { background: #5A6268; }
+
+.combo-heat-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 14px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.combo-heat-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.combo-heat-legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.combo-detail-panel {
+    margin-top: 16px;
+    padding: 14px;
+    background: var(--bg-page);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+}
+
+.combo-detail-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-weight: 800;
+    color: var(--primary);
+}
+
+.combo-detail-close {
+    margin-left: auto;
+    background: none;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: 4px 10px;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.combo-empty {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.combo-combo-item {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+}

@@ -5,10 +5,26 @@ import { useSeo } from '../hooks/useSeo';
  */
 import { useBingoData } from '../hooks/useBingoData';
 import { BingoGrid } from '../components/BingoGrid';
+import { computeBigSmallStreak, computeOddEvenStreak, type StreakLevel } from '../utils/streak-analysis';
+
+/** 依趨勢分級決定 badge 樣式 class */
+function streakBadgeClass(level: StreakLevel): string {
+    switch (level) {
+        case '極其罕見': return 'badge badge-danger';
+        case '極熱': return 'badge badge-warning';
+        case '趨勢形成中': return 'badge badge-success';
+        default: return 'badge badge-neutral';
+    }
+}
 
 export default function BingoLatest() {
     useSeo({ title: '最新即時開獎', description: '追蹤最新期數賓果開獎號碼與連莊動態。', keywords: '賓果最新開獎, 賓果開獎號碼' });
     const { latestDraw, latestStats, loading, countdown, draws, error, refresh } = useBingoData();
+
+    /** 連開走勢：draws 為由新到舊排序，符合 streak-analysis 的輸入需求 */
+    const drawsNumbers = draws.map((d) => d.numbers);
+    const bigSmallStreak = computeBigSmallStreak(drawsNumbers);
+    const oddEvenStreak = computeOddEvenStreak(drawsNumbers);
 
     /**
      * 格式化開獎時間 — 直接從字串擷取日期與 HH:MM
@@ -143,6 +159,56 @@ export default function BingoLatest() {
                         </div>
                     )}
 
+                    {/* 連開走勢監控 */}
+                    <div className="card streak-monitor" style={{ marginBottom: 20 }}>
+                        <h3 className="section-title">🔥 連開走勢監控</h3>
+                        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+                            <div className="streak-item">
+                                <span className="form-label">大小連開</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                                    <span style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>
+                                        {bigSmallStreak.side === '和' || bigSmallStreak.side === null
+                                            ? '和局／無連開'
+                                            : `${bigSmallStreak.side} × ${bigSmallStreak.length} 期`}
+                                    </span>
+                                    <span className={streakBadgeClass(bigSmallStreak.level)}>{bigSmallStreak.level}</span>
+                                </div>
+                            </div>
+                            <div className="streak-item">
+                                <span className="form-label">單雙連開</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                                    <span style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>
+                                        {oddEvenStreak.side === '和' || oddEvenStreak.side === null
+                                            ? '和局／無連開'
+                                            : `${oddEvenStreak.side} × ${oddEvenStreak.length} 期`}
+                                    </span>
+                                    <span className={streakBadgeClass(oddEvenStreak.level)}>{oddEvenStreak.level}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <details className="streak-rules" style={{ marginTop: 12 }}>
+                            <summary style={{ cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                📖 連開規則與分級說明
+                            </summary>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.7 }}>
+                                <p style={{ margin: 0 }}>
+                                    ・大小／單雙判定：20 顆開獎號碼中，任一邊達 <strong>13 顆（含）以上</strong>才算成立，
+                                    兩邊都未達 13 顆則為「和」，和局不計入任一邊的連開，會中斷連開計數。
+                                </p>
+                                <p style={{ margin: '6px 0 0' }}>
+                                    ・趨勢分級（依連續同結果期數）：
+                                    連開 <strong>&lt;3 期</strong> 為平穩、
+                                    <strong>≥3 期</strong> 為趨勢形成中／值得關注、
+                                    <strong>≥5 期</strong> 為極熱、
+                                    <strong>≥8 期</strong> 為極其罕見。
+                                </p>
+                                <p style={{ margin: '6px 0 0' }}>
+                                    ⚠ 每期開獎皆為獨立事件，連開走勢僅供觀察歷史分布，不代表下一期的機率會改變。
+                                </p>
+                            </div>
+                        </details>
+                    </div>
+
                     {/* 80 號碼方格 */}
                     <div className="card" style={{ marginBottom: 20 }}>
                         <h3 className="section-title">🔲 號碼分佈圖</h3>
@@ -193,8 +259,8 @@ export default function BingoLatest() {
                                             if (n > 40) bigCount++;
                                             if (n % 2 !== 0) oddCount++;
                                         });
-                                        const bsResult = bigCount > 10 ? '大' : (bigCount < 10 ? '小' : '和');
-                                        const oeResult = oddCount > 10 ? '單' : (oddCount < 10 ? '雙' : '和');
+                                        const bsResult = bigCount >= 13 ? '大' : (20 - bigCount >= 13 ? '小' : '和'); // 任一邊 ≥13 顆成立，同 side-games.ts
+                                        const oeResult = oddCount >= 13 ? '單' : (20 - oddCount >= 13 ? '雙' : '和');
 
                                         return (
                                             <tr key={draw.period}>

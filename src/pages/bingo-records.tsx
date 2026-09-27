@@ -88,8 +88,8 @@ export default function BingoRecords() {
             if (n > 40) bigCount++;
             if (n % 2 !== 0) oddCount++;
         });
-        const bsResult = bigCount > 10 ? '大' : (bigCount < 10 ? '小' : '和');
-        const oeResult = oddCount > 10 ? '單' : (oddCount < 10 ? '雙' : '和');
+        const bsResult = bigCount >= 13 ? '大' : (20 - bigCount >= 13 ? '小' : '和'); // 任一邊 ≥13 顆成立，同 side-games.ts
+        const oeResult = oddCount >= 13 ? '單' : (20 - oddCount >= 13 ? '雙' : '和');
 
         return (
             <div

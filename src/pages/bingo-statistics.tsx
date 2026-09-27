@@ -11,23 +11,36 @@ import {
 import { useBingoData } from '../hooks/useBingoData';
 import { calculateFrequency, calculateGaps } from '../utils/bingo-strategies';
 import { analyzeSuperNumbers } from '../models/side-games';
+import PeriodSelector from '../components/PeriodSelector';
+import { analyzeSuperTail } from '../utils/super-tail';
 
 type FilterMode = 'all' | 'hot20' | 'cold20';
+
+/** 統計期數選項：沿用共用元件的預設 5/10/20/25/30/50/100，另外保留「全部」 */
+const STATS_PERIOD_OPTIONS = [5, 10, 20, 25, 30, 50, 100];
 
 export default function BingoStatistics() {
     useSeo({ title: '統計分析與走勢圖', description: '深度分析賓果賓果大小單雙盤路走勢、冷熱門獎號與雙贏拖號演算法。', keywords: '賓果統計資料, 賓果走勢' });
     const { draws, loading, countdown, oehlStats } = useBingoData();
     const [filter, setFilter] = useState<FilterMode>('all');
+    /** 統計期數：'all' = 全部（原本預設行為），數字則只取最新 N 期（draws 為由新到舊排序） */
+    const [statsPeriod, setStatsPeriod] = useState<number | 'all'>('all');
+
+    /** 依期數選擇裁切後的樣本（冷熱門/頻率分佈、超級獎號尾數分析共用） */
+    const scopedDraws = useMemo(() => {
+        if (statsPeriod === 'all') return draws;
+        return draws.slice(0, statsPeriod);
+    }, [draws, statsPeriod]);
 
     /** 計算 1-80 號碼頻率 */
     const frequencyData = useMemo(() => {
-        if (draws.length === 0) return [];
-        const freq = calculateFrequency(draws);
+        if (scopedDraws.length === 0) return [];
+        const freq = calculateFrequency(scopedDraws);
         return Array.from({ length: 80 }, (_, i) => ({
             number: i + 1,
             count: freq[i + 1] || 0,
         }));
-    }, [draws]);
+    }, [scopedDraws]);
 
     /** 依篩選模式過濾 */
     const filteredData = useMemo(() => {
@@ -39,13 +52,13 @@ export default function BingoStatistics() {
 
     /** 計算 1-80 號碼遺漏值 (距離上次開出的期數) */
     const gapData = useMemo(() => {
-        if (draws.length === 0) return [];
-        const gaps = calculateGaps(draws);
+        if (scopedDraws.length === 0) return [];
+        const gaps = calculateGaps(scopedDraws);
         return Array.from({ length: 80 }, (_, i) => ({
             number: i + 1,
             gap: gaps[i + 1] || 0,
         })).sort((a, b) => b.gap - a.gap); // 由大到小排序
-    }, [draws]);
+    }, [scopedDraws]);
 
     /** 關鍵指標 */
     const stats = useMemo(() => {
@@ -61,6 +74,12 @@ export default function BingoStatistics() {
 
     /** 超級獎號次數統計 */
     const superData = useMemo(() => analyzeSuperNumbers(draws.map((d) => d.superNumber)), [draws]);
+
+    /** 超級獎號尾數 (0~9) 分析：出現次數 + 目前遺漏期數，受期數選擇控制 */
+    const superTailData = useMemo(
+        () => analyzeSuperTail(scopedDraws.map((d) => d.superNumber)),
+        [scopedDraws],
+    );
 
     /** 樣本的期數範圍（由舊到新） */
     const periodRange = useMemo(() => {
@@ -227,7 +246,7 @@ export default function BingoStatistics() {
 
                     {/* 篩選按鈕 */}
                     <div className="glass-card" style={{ marginBottom: 20 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                             <h3 className="section-title" style={{ marginBottom: 0 }}>📈 頻率分佈</h3>
                             <div className="filter-group">
                                 <button
@@ -249,6 +268,28 @@ export default function BingoStatistics() {
                                     🧊 冷門 20
                                 </button>
                             </div>
+                        </div>
+
+                        {/* 統計期數選擇：套用於冷熱門/頻率分佈與遺漏值分析、超級獎號尾數分析 */}
+                        <div className="streak-stats-period" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+                            <span className="form-label" style={{ marginRight: 4 }}>統計期數</span>
+                            <div className="filter-group">
+                                <button
+                                    type="button"
+                                    className={`filter-btn${statsPeriod === 'all' ? ' active' : ''}`}
+                                    onClick={() => setStatsPeriod('all')}
+                                >
+                                    全部
+                                </button>
+                            </div>
+                            <PeriodSelector
+                                value={typeof statsPeriod === 'number' ? statsPeriod : -1}
+                                onChange={(n) => setStatsPeriod(n)}
+                                options={STATS_PERIOD_OPTIONS}
+                            />
+                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                （目前樣本：{scopedDraws.length} 期）
+                            </span>
                         </div>
 
                         {/* 長條圖 */}
@@ -377,6 +418,40 @@ export default function BingoStatistics() {
                                 在 {superData.totalPeriods} 期的樣本下本來就會有號碼開 3~4 次、也會有三成以上從未開出，
                                 這是隨機性的正常表現，<strong>不代表任何號碼下一期比較容易開出</strong>。
                             </p>
+                        </div>
+                    </div>
+
+                    {/* 超級獎號尾數分析 — 受統計期數選擇控制 */}
+                    <div className="glass-card tail-analysis" style={{ marginBottom: 20 }}>
+                        <h3 className="section-title">🔟 超級獎號尾數分析（樣本：{scopedDraws.length} 期）</h3>
+                        <div className="tail-chart-wrap" style={{ width: '100%', height: 260 }}>
+                            <ResponsiveContainer>
+                                <BarChart data={superTailData} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="digit" tick={{ fontSize: 11 }} tickFormatter={(v) => `尾${v}`} />
+                                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                                    <Tooltip
+                                        contentStyle={{
+                                            background: 'rgba(17, 24, 39, 0.95)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            borderRadius: 8,
+                                            color: '#f1f5f9',
+                                        }}
+                                        labelFormatter={(v) => `尾數 ${v}`}
+                                        formatter={(value: unknown) => [`${value} 次`, '出現次數']}
+                                    />
+                                    <Bar dataKey="count" radius={[4, 4, 0, 0]} fill="#00ff87" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="tail-gap-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 12, marginTop: 16 }}>
+                            {superTailData.map((d) => (
+                                <div key={d.digit} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 8px', background: 'var(--bg-page)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
+                                    <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--primary)' }}>尾 {d.digit}</span>
+                                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 4 }}>出現 {d.count} 次</span>
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--danger)', marginTop: 2, fontWeight: 700 }}>遺漏 {d.gap} 期</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
 

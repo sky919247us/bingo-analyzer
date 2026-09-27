@@ -24,6 +24,8 @@ const BINGO_NAV = [
     { to: '/bingo-records', label: '預測紀錄', icon: '📋', end: false },
     { to: '/bingo-distribution', label: '獎號分布', icon: '🎯', end: false },
     { to: '/bingo-statistics', label: '統計分析', icon: '📈', end: false },
+    { to: '/bingo-combos', label: '組合分析', icon: '🧩', end: false },
+    { to: '/bingo-guide', label: '玩法教學', icon: '📖', end: false },
     { to: '/dashboard-large', label: '大螢幕模式', icon: '🖥️', end: false },
 ];
 
