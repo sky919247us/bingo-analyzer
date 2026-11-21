@@ -128,7 +128,15 @@ export async function lineCallback(request: Request, env: ArcadeEnv): Promise<Re
         code_verifier: verifier,
       }),
     });
-    if (!tokenResp.ok) throw new Error(`token 交換失敗 (${tokenResp.status})`);
+    if (!tokenResp.ok) {
+      // 帶出 LINE 的錯誤代碼（例如 invalid_client / invalid_grant），方便排查；回應內容不含任何密鑰
+      let reason = '';
+      try {
+        const e: any = await tokenResp.json();
+        reason = [e?.error, e?.error_description].filter(Boolean).join(': ');
+      } catch { /* 非 JSON 回應 */ }
+      throw new Error(`token 交換失敗 (${tokenResp.status}${reason ? ' ' + reason : ''})`);
+    }
     const tokenData: any = await tokenResp.json();
     if (!tokenData.id_token) throw new Error('LINE 未回傳 id_token');
 
