@@ -1,0 +1,331 @@
+/* ==========================================================
+ * 賓果娛樂機 — 版面、面板、按鈕（所有選擇器皆以 .arcade- 開頭）
+ * 演出相關樣式見 arcade-fx.css
+ * ========================================================== */
+@import './arcade-fx.css';
+
+.arcade-root {
+  --arcade-bg: #07060f;
+  --arcade-panel: #120f24;
+  --arcade-panel-2: #1a1633;
+  --arcade-line: rgba(140, 120, 255, 0.25);
+  --arcade-text: #ece9ff;
+  --arcade-muted: #9a94c4;
+  --arcade-cyan: #22e5ff;
+  --arcade-pink: #ff3fb4;
+  --arcade-gold: #ffd54a;
+  --arcade-gold-2: #ff9f1c;
+  --arcade-green: #3dff9a;
+  --arcade-red: #ff4d5e;
+  --arcade-accent: var(--arcade-cyan);
+  color: var(--arcade-text);
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(255, 63, 180, 0.16), transparent 55%),
+    radial-gradient(ellipse at 80% 10%, rgba(34, 229, 255, 0.14), transparent 55%),
+    var(--arcade-bg);
+  border-radius: 16px;
+  padding: 12px 16px 24px;
+  font-family: inherit;
+  min-height: 70vh;
+  overflow-x: clip;
+  position: relative;
+}
+
+.arcade-root *, .arcade-root *::before, .arcade-root *::after { box-sizing: border-box; }
+.arcade-root h1, .arcade-root h2, .arcade-root h3 { color: inherit; margin: 0; }
+.arcade-root button { font-family: inherit; }
+
+/* ---------- 免責聲明 ---------- */
+.arcade-disclaimer {
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--arcade-muted);
+  border: 1px solid var(--arcade-line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.arcade-disclaimer--top { margin-bottom: 10px; }
+.arcade-disclaimer--inline { margin-top: 12px; }
+.arcade-disclaimer--footer { margin-top: 20px; text-align: center; }
+.arcade-disclaimer-tag {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: rgba(255, 213, 74, 0.15);
+  color: var(--arcade-gold);
+  font-weight: 700;
+}
+
+/* ---------- 頁首 ---------- */
+.arcade-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.arcade-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.arcade-badge--demo { background: rgba(255, 159, 28, 0.15); color: var(--arcade-gold-2); border: 1px solid rgba(255, 159, 28, 0.5); }
+.arcade-badge--online { background: rgba(61, 255, 154, 0.12); color: var(--arcade-green); border: 1px solid rgba(61, 255, 154, 0.45); }
+.arcade-user { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.arcade-user-name { max-width: 10em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.arcade-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.arcade-avatar--sm { width: 24px; height: 24px; }
+.arcade-avatar--empty { display: inline-flex; align-items: center; justify-content: center; background: var(--arcade-panel-2); font-size: 0.8rem; }
+.arcade-login-loading { color: var(--arcade-muted); font-size: 0.85rem; }
+.arcade-notice {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 8px 12px; margin-bottom: 10px; border-radius: 8px;
+  background: rgba(34, 229, 255, 0.1); border: 1px solid rgba(34, 229, 255, 0.4);
+}
+.arcade-notice button { background: none; border: 0; color: inherit; font-size: 1.2rem; min-width: 44px; min-height: 44px; cursor: pointer; }
+
+/* ---------- 版面 ---------- */
+.arcade-layout {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr) 360px;
+  grid-template-areas: 'left center right';
+  gap: 16px;
+  align-items: start;
+}
+.arcade-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.arcade-col--center { grid-area: center; }
+.arcade-col--left { grid-area: left; }
+.arcade-col--right { grid-area: right; }
+.arcade-mtabs { display: none; }
+
+@media (max-width: 1200px) {
+  .arcade-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: 'center center' 'left right';
+  }
+}
+
+/* ---------- 面板 ---------- */
+.arcade-panel {
+  background: linear-gradient(180deg, var(--arcade-panel-2), var(--arcade-panel));
+  border: 1px solid var(--arcade-line);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 0 24px rgba(120, 80, 255, 0.08) inset;
+}
+.arcade-panel-title { font-size: 1rem; font-weight: 800; letter-spacing: 0.04em; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.arcade-panel-title small { font-weight: 500; color: var(--arcade-muted); font-size: 0.8rem; }
+.arcade-panel-sub { font-size: 0.9rem; margin: 16px 0 8px; }
+.arcade-muted { color: var(--arcade-muted); font-size: 0.85rem; }
+.arcade-ok { color: var(--arcade-green); font-size: 0.85rem; margin: 8px 0 0; }
+.arcade-error { color: var(--arcade-red); font-size: 0.85rem; margin: 8px 0 0; }
+.arcade-up { color: var(--arcade-green); }
+.arcade-down { color: var(--arcade-red); }
+.arcade-demo-note { font-size: 0.78rem; color: var(--arcade-gold-2); margin: 8px 0 0; text-align: center; }
+.arcade-hint { font-size: 0.78rem; color: var(--arcade-muted); margin: 6px 0 0; }
+.arcade-tag { font-style: normal; font-size: 0.7rem; padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+.arcade-tag--replay { background: rgba(34, 229, 255, 0.18); color: var(--arcade-cyan); }
+.arcade-tag--sim { background: rgba(255, 159, 28, 0.18); color: var(--arcade-gold-2); }
+.arcade-tag--demo { background: rgba(255, 159, 28, 0.18); color: var(--arcade-gold-2); }
+
+/* ---------- 按鈕 ---------- */
+.arcade-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; padding: 0 16px;
+  border-radius: 10px; border: 1px solid var(--arcade-line);
+  background: var(--arcade-panel-2); color: var(--arcade-text);
+  font-weight: 700; font-size: 0.9rem; cursor: pointer; text-decoration: none;
+  transition: transform 0.1s, box-shadow 0.2s, opacity 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.arcade-btn:active:not(:disabled) { transform: scale(0.97); }
+.arcade-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.arcade-btn--sm { min-height: 44px; padding: 0 12px; font-size: 0.8rem; }
+.arcade-btn--xl { min-height: 52px; font-size: 1.05rem; }
+.arcade-btn--block { width: 100%; }
+.arcade-btn--icon { padding: 0 12px; }
+.arcade-btn--ghost { background: transparent; }
+.arcade-btn--neon { border-color: var(--arcade-cyan); color: var(--arcade-cyan); box-shadow: 0 0 12px rgba(34, 229, 255, 0.25); background: rgba(34, 229, 255, 0.06); }
+.arcade-btn--gold {
+  border: 0; color: #2a1600;
+  background: linear-gradient(180deg, #fff1a8, var(--arcade-gold) 45%, var(--arcade-gold-2));
+  box-shadow: 0 0 18px rgba(255, 213, 74, 0.4);
+}
+.arcade-btn--line { background: #06c755; border-color: #06c755; color: #fff; }
+.arcade-link { background: none; border: 0; color: var(--arcade-muted); text-decoration: underline; cursor: pointer; min-height: 44px; font-size: 0.8rem; }
+
+/* ---------- 下注 ---------- */
+.arcade-bet-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.arcade-bet-head .arcade-panel-title { margin-bottom: 0; }
+.arcade-countdown { font-size: 0.85rem; color: var(--arcade-muted); white-space: nowrap; }
+.arcade-countdown b { color: var(--arcade-cyan); font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.arcade-countdown.is-urgent b { color: var(--arcade-red); }
+.arcade-seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.arcade-seg-btn, .arcade-chip, .arcade-tab, .arcade-mtab {
+  min-height: 44px; border-radius: 10px; border: 1px solid var(--arcade-line);
+  background: rgba(255, 255, 255, 0.03); color: var(--arcade-text);
+  font-weight: 700; font-size: 0.85rem; cursor: pointer; padding: 0 8px;
+}
+.arcade-seg-btn.is-on, .arcade-chip.is-on, .arcade-tab.is-on, .arcade-mtab.is-on {
+  border-color: var(--arcade-pink); background: rgba(255, 63, 180, 0.16); color: #fff;
+  box-shadow: 0 0 12px rgba(255, 63, 180, 0.35);
+}
+.arcade-stars, .arcade-mults { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.arcade-mults { grid-template-columns: repeat(6, minmax(0, 1fr)); margin-top: 10px; }
+.arcade-chip--mult { padding: 0 2px; font-size: 0.8rem; }
+.arcade-pick-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.85rem; }
+.arcade-pick-bar > span { flex: 1; }
+.arcade-pick-bar b { color: var(--arcade-gold); }
+.arcade-picker { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+.arcade-pick {
+  min-height: 34px; padding: 0; border-radius: 50%; aspect-ratio: 1 / 1;
+  border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.04);
+  color: var(--arcade-text); font-size: 0.78rem; font-weight: 700; cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.arcade-pick.is-on { background: radial-gradient(circle at 35% 30%, #fff6c2, var(--arcade-gold) 50%, var(--arcade-gold-2)); color: #2a1600; border-color: transparent; box-shadow: 0 0 10px rgba(255, 213, 74, 0.6); }
+.arcade-pick:disabled:not(.is-on) { opacity: 0.35; cursor: not-allowed; }
+.arcade-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.arcade-sides .arcade-hint { grid-column: 1 / -1; }
+.arcade-side-btn {
+  min-height: 72px; border-radius: 12px; border: 1px solid var(--arcade-line);
+  background: rgba(255, 255, 255, 0.04); color: #fff; font-size: 1.6rem; font-weight: 900; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.arcade-side-btn small { font-size: 0.7rem; font-weight: 500; color: var(--arcade-muted); }
+.arcade-side-btn.is-on { border-color: var(--arcade-gold); background: rgba(255, 213, 74, 0.14); box-shadow: 0 0 14px rgba(255, 213, 74, 0.4); }
+.arcade-cost { display: flex; justify-content: space-between; align-items: baseline; margin: 6px 0 10px; font-size: 0.85rem; color: var(--arcade-muted); }
+.arcade-cost b { font-size: 1.3rem; color: var(--arcade-gold); font-variant-numeric: tabular-nums; }
+.arcade-placed { margin-top: 12px; border-top: 1px dashed var(--arcade-line); padding-top: 10px; font-size: 0.82rem; }
+.arcade-placed-head { font-weight: 700; margin-bottom: 6px; color: var(--arcade-cyan); }
+.arcade-placed ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.arcade-placed li { display: flex; flex-direction: column; padding: 6px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.04); }
+.arcade-placed-nums { color: var(--arcade-gold); font-variant-numeric: tabular-nums; word-break: break-all; }
+
+/* ---------- 戰績 ---------- */
+.arcade-coins { text-align: center; padding: 8px 0 12px; border-bottom: 1px dashed var(--arcade-line); margin-bottom: 10px; }
+.arcade-coin-main { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
+.arcade-coin-main b { font-size: 1.9rem; color: var(--arcade-gold); text-shadow: 0 0 14px rgba(255, 213, 74, 0.5); font-variant-numeric: tabular-nums; }
+.arcade-coin-icon { color: var(--arcade-gold); }
+.arcade-coin-sub { font-size: 0.85rem; color: var(--arcade-muted); }
+.arcade-coin-sub b { color: var(--arcade-cyan); }
+.arcade-statlist { margin: 0; display: grid; gap: 6px; }
+.arcade-statlist > div { display: flex; justify-content: space-between; font-size: 0.88rem; }
+.arcade-statlist dt { color: var(--arcade-muted); }
+.arcade-statlist dd { margin: 0; font-variant-numeric: tabular-nums; }
+.arcade-stats-actions { display: grid; gap: 8px; margin-top: 12px; }
+
+/* ---------- 排行榜 ---------- */
+.arcade-tabs-scroll { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.arcade-tab { font-size: 0.8rem; }
+.arcade-board-me { padding: 8px; border-radius: 8px; background: rgba(255, 213, 74, 0.1); margin-bottom: 8px; font-size: 0.85rem; }
+.arcade-board-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 420px; overflow-y: auto; }
+.arcade-board-list li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.03); font-size: 0.85rem; }
+.arcade-board-rank { width: 24px; text-align: center; font-weight: 900; color: var(--arcade-muted); }
+.arcade-board-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arcade-board-val { font-variant-numeric: tabular-nums; color: var(--arcade-gold); }
+.arcade-board-list li.is-top1 .arcade-board-rank { color: var(--arcade-gold); }
+.arcade-board-list li.is-top2 .arcade-board-rank { color: #d9e2ff; }
+.arcade-board-list li.is-top3 .arcade-board-rank { color: #ff9f6b; }
+
+/* ---------- 規則 ---------- */
+.arcade-rules ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 0.85rem; color: var(--arcade-muted); line-height: 1.6; }
+
+/* ---------- 同意對話框 ---------- */
+.arcade-modal {
+  position: fixed; inset: 0; z-index: 1300;
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: rgba(3, 2, 10, 0.8); backdrop-filter: blur(4px);
+}
+.arcade-modal-card {
+  width: min(480px, 100%); max-height: calc(100vh - 32px); overflow-y: auto;
+  background: linear-gradient(180deg, #1d1838, #100d20); color: #ece9ff;
+  border: 2px solid var(--arcade-pink, #ff3fb4); border-radius: 16px; padding: 20px;
+  box-shadow: 0 0 40px rgba(255, 63, 180, 0.35);
+}
+.arcade-modal-title { font-size: 1.2rem; font-weight: 900; margin: 0 0 10px; color: #ffd54a; }
+.arcade-modal-text { font-size: 0.9rem; line-height: 1.7; margin: 0 0 10px; }
+.arcade-modal-list { font-size: 0.82rem; color: #b9b3e0; padding-left: 18px; margin: 0 0 12px; line-height: 1.6; }
+.arcade-check { display: flex; gap: 10px; align-items: flex-start; font-size: 0.9rem; margin-bottom: 14px; cursor: pointer; min-height: 44px; }
+.arcade-check input { width: 22px; height: 22px; margin-top: 2px; flex-shrink: 0; accent-color: #ff3fb4; }
+
+/* ---------- 管理頁 ---------- */
+.arcade-admin { display: flex; flex-direction: column; gap: 14px; }
+.arcade-admin-title { font-size: 1.3rem; font-weight: 900; }
+.arcade-admin-gate { max-width: 480px; margin: 40px auto; text-align: center; display: grid; gap: 12px; justify-items: center; }
+.arcade-admin-row { display: flex; gap: 8px; }
+.arcade-input {
+  min-height: 44px; padding: 0 12px; border-radius: 10px; width: 100%;
+  border: 1px solid var(--arcade-line); background: rgba(0, 0, 0, 0.3); color: var(--arcade-text); font-size: 1rem;
+}
+.arcade-admin-users { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 6px; }
+.arcade-admin-user {
+  width: 100%; min-height: 44px; text-align: left; display: grid; gap: 2px; padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--arcade-line); background: rgba(255, 255, 255, 0.03); color: var(--arcade-text); cursor: pointer;
+}
+.arcade-admin-user small { color: var(--arcade-muted); word-break: break-all; }
+.arcade-admin-user.is-on { border-color: var(--arcade-gold); }
+.arcade-admin-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end; }
+.arcade-admin-form label { display: grid; gap: 4px; font-size: 0.85rem; color: var(--arcade-muted); }
+.arcade-table-wrap { overflow-x: auto; }
+.arcade-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.arcade-table th, .arcade-table td { padding: 6px 8px; border-bottom: 1px solid var(--arcade-line); text-align: left; white-space: nowrap; }
+
+/* ---------- 手機 ---------- */
+@media (max-width: 768px) {
+  .arcade-root { padding: 8px 8px calc(84px + env(safe-area-inset-bottom, 0px)); border-radius: 12px; }
+  .arcade-layout { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+  .arcade-mtabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .arcade-pane { display: none; }
+  .arcade-pane.is-on { display: block; }
+  .arcade-col--left.arcade-pane.is-on { display: flex; }
+  .arcade-col--left { order: 2; }
+  .arcade-col--right { order: 3; }
+
+  .arcade-drawer {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
+    max-height: 82vh; display: flex; flex-direction: column;
+    background: #0d0b1c; border-top: 2px solid var(--arcade-pink);
+    border-radius: 16px 16px 0 0; box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6);
+    transform: translateY(calc(100% - 56px - env(safe-area-inset-bottom, 0px)));
+    transition: transform 0.3s ease;
+  }
+  .arcade-drawer.is-open { transform: translateY(0); }
+  .arcade-drawer-handle {
+    flex-shrink: 0; min-height: 56px; width: 100%; border: 0; background: transparent; color: #fff;
+    font-weight: 800; font-size: 0.95rem; cursor: pointer; position: relative;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .arcade-drawer.is-open .arcade-drawer-handle { padding-bottom: 0; }
+  .arcade-drawer-count {
+    display: inline-flex; align-items: center; justify-content: center; margin-left: 8px;
+    min-width: 22px; height: 22px; border-radius: 11px; background: var(--arcade-pink); font-size: 0.75rem;
+  }
+  .arcade-drawer-body { overflow-y: auto; padding: 0 12px calc(12px + env(safe-area-inset-bottom, 0px)); -webkit-overflow-scrolling: touch; }
+  .arcade-drawer .arcade-panel { border: 0; padding: 4px 0; background: none; box-shadow: none; }
+  .arcade-picker { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+  .arcade-pick { min-height: 44px; aspect-ratio: auto; border-radius: 12px; font-size: 0.9rem; }
+  .arcade-mults { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .arcade-board-list { max-height: none; }
+}
+@media (min-width: 769px) {
+  .arcade-drawer-handle { display: none; }
+}
+
+/* ---------- 多期投注 ---------- */
+.arcade-periods-head { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; font-size: 0.85rem; }
+.arcade-periods-head small { color: var(--arcade-muted); font-size: 0.75rem; }
+.arcade-periods { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin: 6px 0 4px; }
+.arcade-chip--period { padding: 0 2px; font-size: 0.8rem; min-height: 44px; }
+.arcade-chip--period:disabled { opacity: 0.35; cursor: not-allowed; }
+.arcade-cost-multi { margin: -4px 0 10px; font-size: 0.78rem; color: var(--arcade-muted); text-align: right; line-height: 1.5; }
+.arcade-cost-multi b { color: var(--arcade-gold); }
+.arcade-reserved .arcade-placed-head { color: var(--arcade-gold); }
+.arcade-reserved-range { color: var(--arcade-cyan); font-variant-numeric: tabular-nums; }
+@media (max-width: 767px) {
+  .arcade-periods { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

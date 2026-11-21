@@ -1,0 +1,9 @@
+# 複製為 .dev.vars 供 `wrangler dev` 本地使用（.dev.vars 不進版控、不會被部署）
+# 正式環境請用 `npx wrangler secret put <名稱>` 設定，不要寫在 wrangler.toml
+LINE_CHANNEL_ID=
+LINE_CHANNEL_SECRET=
+LINE_CALLBACK_URL=http://127.0.0.1:8787/api/auth/line/callback
+# 逗號分隔的 LINE userId（U 開頭 33 碼）
+ADMIN_LINE_IDS=
+# 只限本地測試：啟用 /api/dev/* 測試後門。正式環境「絕對不可」設定此變數
+ARCADE_DEV_LOGIN=1

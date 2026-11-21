@@ -3,7 +3,7 @@
  * 金融後台版面配置 (左側 Sidebar + 頂部 Topbar + 右側主要內容)
  * 支援手機版漢堡選單切換側邊欄
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 
 /* 共用版面元件 */
@@ -28,6 +28,11 @@ import BingoDistribution from './pages/bingo-distribution';
 import DashboardLarge from './pages/dashboard-large';
 import BingoCombos from './pages/bingo-combos';
 import BingoGuide from './pages/bingo-guide';
+
+/* 賓果娛樂機（延遲載入，避免拖慢其他分頁） */
+const BingoArcade = lazy(() => import('./pages/bingo-arcade'));
+const ArcadeAdmin = lazy(() => import('./pages/arcade-admin'));
+const ArcadePrivacy = lazy(() => import('./pages/arcade-privacy'));
 
 export default function App() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -73,6 +78,9 @@ export default function App() {
                                 <Route path="/bingo-combos" element={<BingoCombos />} />
                                 <Route path="/bingo-guide" element={<BingoGuide />} />
                                 <Route path="/dashboard-large" element={<DashboardLarge />} />
+                                <Route path="/bingo-arcade" element={<Suspense fallback={<div className="loading-spinner">載入中…</div>}><BingoArcade /></Suspense>} />
+                                <Route path="/arcade-admin" element={<Suspense fallback={<div className="loading-spinner">載入中…</div>}><ArcadeAdmin /></Suspense>} />
+                                <Route path="/arcade-privacy" element={<Suspense fallback={<div className="loading-spinner">載入中…</div>}><ArcadePrivacy /></Suspense>} />
                             </Routes>
                         </div>
                     </main>

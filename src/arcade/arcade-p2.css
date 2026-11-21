@@ -1,0 +1,183 @@
+/* ==========================================================
+ * 賓果娛樂機 P2 — 每日任務蓋章、成就徽章、連莊主題色、近期注單、帳號設定、隱私頁
+ * 沿用 arcade.css 的 --arcade-* 色票；所有選擇器以 .arcade- 開頭
+ * ========================================================== */
+
+/* ---------- 隱私說明連結 ---------- */
+.arcade-privacy-link {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px;
+  color: var(--arcade-cyan, #22e5ff); text-decoration: underline; text-underline-offset: 3px; font-weight: 700;
+}
+.arcade-disclaimer .arcade-privacy-link { min-height: 0; padding: 0 2px; }
+.arcade-modal-list .arcade-privacy-link { min-height: 0; padding: 0 4px; }
+.arcade-login { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.arcade-footer-links { display: flex; justify-content: center; gap: 12px; margin-top: 4px; }
+
+/* ---------- 左欄拆成「戰績」「任務」兩個分頁 ---------- */
+@media (min-width: 769px) {
+  .arcade-pane--stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+}
+@media (max-width: 768px) {
+  .arcade-mtabs.arcade-mtabs--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .arcade-pane--stack.is-on { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .arcade-col--split:not(:has(.arcade-pane.is-on)) { display: none; }
+}
+
+/* ---------- 每日任務蓋章卡 ---------- */
+.arcade-missions-note { margin: 0 0 8px; }
+.arcade-missions-note .arcade-link { min-height: 44px; padding: 0 6px; }
+.arcade-stamps {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px;
+}
+.arcade-stamp {
+  position: relative; width: 100%; min-height: 96px; padding: 8px 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border-radius: 14px; border: 2px dashed var(--arcade-line);
+  background: rgba(255, 255, 255, 0.03); color: var(--arcade-text); font-family: inherit;
+  cursor: default; overflow: hidden; -webkit-tap-highlight-color: transparent;
+}
+.arcade-stamp-icon { font-size: 1.4rem; line-height: 1; }
+.arcade-stamp-title { font-size: 0.82rem; font-weight: 800; }
+.arcade-stamp-sub { font-size: 0.72rem; color: var(--arcade-muted); font-variant-numeric: tabular-nums; }
+.arcade-stamp.is-todo { opacity: 0.75; }
+.arcade-stamp:disabled { cursor: default; }
+.arcade-stamp.is-ready {
+  cursor: pointer; border-style: solid; border-color: var(--arcade-gold);
+  background: rgba(255, 213, 74, 0.1);
+  box-shadow: 0 0 14px rgba(255, 213, 74, 0.45);
+  animation: arcade-stamp-ready 1.2s ease-in-out infinite alternate;
+}
+.arcade-stamp.is-ready .arcade-stamp-sub { color: var(--arcade-gold); font-weight: 800; }
+.arcade-stamp.is-ready:active { transform: scale(0.97); }
+.arcade-stamp.is-claimed { border-style: solid; border-color: rgba(255, 77, 94, 0.6); background: rgba(255, 77, 94, 0.08); }
+.arcade-stamp.is-claimed .arcade-stamp-icon,
+.arcade-stamp.is-claimed .arcade-stamp-title,
+.arcade-stamp.is-claimed .arcade-stamp-sub { opacity: 0.55; }
+/* 紅色印泥章 */
+.arcade-stamp-ink {
+  position: absolute; left: 50%; top: 50%;
+  width: 64px; height: 64px; margin: -32px 0 0 -32px;
+  display: flex; align-items: center; justify-content: center;
+  border: 3px double #ff4d5e; border-radius: 50%;
+  color: #ff4d5e; font-size: 1rem; font-weight: 900; letter-spacing: 0.1em;
+  text-shadow: 0 0 6px rgba(255, 77, 94, 0.6); box-shadow: 0 0 10px rgba(255, 77, 94, 0.4) inset;
+  transform: rotate(-14deg); pointer-events: none;
+}
+.arcade-stamp.is-just .arcade-stamp-ink { animation: arcade-stamp-in 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+@keyframes arcade-stamp-in {
+  0% { opacity: 0; transform: rotate(-14deg) scale(2.2); }
+  60% { opacity: 1; transform: rotate(-14deg) scale(0.92); }
+  100% { opacity: 1; transform: rotate(-14deg) scale(1); }
+}
+@keyframes arcade-stamp-ready {
+  from { box-shadow: 0 0 8px rgba(255, 213, 74, 0.3); }
+  to { box-shadow: 0 0 18px rgba(255, 213, 74, 0.7); }
+}
+
+/* ---------- 成就徽章牆 ---------- */
+.arcade-badges {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px;
+}
+.arcade-badge-item {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px;
+  min-height: 96px; padding: 8px 4px; border-radius: 12px;
+  border: 1px solid var(--arcade-line); background: rgba(255, 255, 255, 0.03);
+}
+.arcade-badge-icon { font-size: 1.6rem; line-height: 1.2; }
+.arcade-badge-title { font-size: 0.8rem; font-weight: 800; }
+.arcade-badge-desc { font-size: 0.7rem; color: var(--arcade-muted); line-height: 1.35; overflow-wrap: anywhere; }
+.arcade-badge-item.is-locked .arcade-badge-icon { filter: grayscale(1); opacity: 0.4; }
+.arcade-badge-item.is-locked .arcade-badge-title { color: var(--arcade-muted); }
+.arcade-badge-item.is-unlocked {
+  border-color: rgba(255, 213, 74, 0.6); background: rgba(255, 213, 74, 0.08);
+  box-shadow: 0 0 12px rgba(255, 213, 74, 0.25);
+}
+.arcade-badge-item.is-unlocked .arcade-badge-title { color: var(--arcade-gold); }
+
+/* 成就 toast：沿用 .arcade-toast，關閉鈕放大到 44px */
+.arcade-toast--achv { border-color: rgba(34, 229, 255, 0.7); background: linear-gradient(135deg, #062a2f, var(--arcade-panel-2)); }
+.arcade-toast--achv .arcade-toast-title { background: var(--arcade-cyan); color: #04202a; }
+.arcade-toast--achv .arcade-toast-text { color: var(--arcade-cyan); }
+.arcade-toast--achv .arcade-toast-close { min-width: 44px; min-height: 44px; margin: -12px -10px -12px 0; }
+
+/* ---------- 近期注單 ---------- */
+.arcade-recent-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow-y: auto; }
+.arcade-recent-list li {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'period status' 'item status';
+  gap: 0 8px; align-items: center; padding: 6px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.04); font-size: 0.8rem;
+}
+.arcade-recent-period { grid-area: period; font-variant-numeric: tabular-nums; color: var(--arcade-muted); min-width: 0; overflow-wrap: anywhere; }
+.arcade-recent-item { grid-area: item; min-width: 0; overflow-wrap: anywhere; }
+.arcade-date-tag {
+  font-style: normal; display: inline-block; margin-right: 4px; padding: 0 5px; border-radius: 4px;
+  background: rgba(34, 229, 255, 0.15); color: var(--arcade-cyan); font-weight: 700;
+}
+.arcade-bet-status { grid-area: status; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800; white-space: nowrap; }
+.arcade-bet-status.is-pending { background: rgba(34, 229, 255, 0.12); color: var(--arcade-cyan); }
+.arcade-bet-status.is-win { background: rgba(61, 255, 154, 0.14); color: var(--arcade-green); }
+.arcade-bet-status.is-lose { background: rgba(255, 255, 255, 0.06); color: var(--arcade-muted); }
+.arcade-bet-status.is-refunded { background: rgba(255, 159, 28, 0.16); color: var(--arcade-gold-2); border: 1px solid rgba(255, 159, 28, 0.5); }
+.arcade-crossday { color: var(--arcade-cyan) !important; font-weight: 700; }
+
+/* ---------- 帳號設定／刪除帳號 ---------- */
+.arcade-account .arcade-muted { margin: 0 0 8px; overflow-wrap: anywhere; }
+.arcade-btn--danger { border-color: rgba(255, 77, 94, 0.6); color: var(--arcade-red); }
+.arcade-btn--danger-solid { border: 0; background: linear-gradient(180deg, #ff6b78, #d92638); color: #fff; box-shadow: 0 0 14px rgba(255, 77, 94, 0.4); }
+.arcade-delete { border: 1px solid rgba(255, 77, 94, 0.5); border-radius: 12px; padding: 12px; background: rgba(255, 77, 94, 0.06); display: grid; gap: 8px; }
+.arcade-delete-title { font-size: 0.95rem; font-weight: 900; color: var(--arcade-red); }
+.arcade-delete-list { margin: 0; padding-left: 18px; font-size: 0.8rem; line-height: 1.6; color: var(--arcade-text); }
+.arcade-delete-list b { color: var(--arcade-gold); }
+.arcade-delete-label { font-size: 0.85rem; color: var(--arcade-muted); }
+.arcade-delete-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+/* ---------- 連莊主題色（2 綠、3 紅、5 金、10 彩虹） ---------- */
+.arcade-streak { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.arcade-streak-chip {
+  align-self: flex-start; padding: 2px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 800;
+  border: 1px solid var(--arcade-streak-a, var(--arcade-line)); color: var(--arcade-streak-a, var(--arcade-text));
+  background: rgba(0, 0, 0, 0.3); box-shadow: 0 0 10px var(--arcade-streak-glow, transparent);
+}
+.arcade-streak--green { --arcade-streak-a: #3dff9a; --arcade-streak-b: #12b86a; --arcade-streak-glow: rgba(61, 255, 154, 0.5); }
+.arcade-streak--red { --arcade-streak-a: #ff4d5e; --arcade-streak-b: #ff8a3d; --arcade-streak-glow: rgba(255, 77, 94, 0.55); }
+.arcade-streak--gold { --arcade-streak-a: #ffd54a; --arcade-streak-b: #ff9f1c; --arcade-streak-glow: rgba(255, 213, 74, 0.6); }
+.arcade-streak--green .arcade-machine,
+.arcade-streak--red .arcade-machine,
+.arcade-streak--gold .arcade-machine {
+  background:
+    linear-gradient(180deg, #16122c, #0b0918) padding-box,
+    linear-gradient(90deg, var(--arcade-streak-a), var(--arcade-streak-b), var(--arcade-accent), var(--arcade-streak-a)) border-box;
+  background-size: 100% 100%, 300% 100%;
+  box-shadow: 0 0 22px var(--arcade-streak-glow), 0 0 46px var(--arcade-streak-glow);
+}
+.arcade-streak--rainbow { --arcade-streak-a: #ff6bf1; --arcade-streak-glow: rgba(255, 107, 241, 0.55); }
+.arcade-streak--rainbow .arcade-machine {
+  background:
+    linear-gradient(180deg, #16122c, #0b0918) padding-box,
+    linear-gradient(90deg, #ff4d5e, #ff9f1c, #ffd54a, #3dff9a, #22e5ff, #7b6bff, #ff6bf1, #ff4d5e) border-box;
+  background-size: 100% 100%, 300% 100%;
+  box-shadow: 0 0 24px rgba(255, 107, 241, 0.45), 0 0 50px rgba(34, 229, 255, 0.3);
+}
+.arcade-streak--rainbow .arcade-streak-chip {
+  border-color: transparent; color: #fff;
+  background: linear-gradient(90deg, #ff4d5e, #ffd54a, #3dff9a, #22e5ff, #ff6bf1);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* ---------- 隱私說明頁 ---------- */
+.arcade-privacy-card { max-width: 760px; margin: 0 auto; line-height: 1.75; overflow-wrap: anywhere; }
+.arcade-privacy-title { font-size: 1.3rem; font-weight: 900; color: var(--arcade-gold); margin-bottom: 8px !important; }
+.arcade-privacy-card h2 { font-size: 1rem; font-weight: 800; color: var(--arcade-cyan); margin: 18px 0 6px !important; }
+.arcade-privacy-card p, .arcade-privacy-card ul { margin: 0; font-size: 0.9rem; }
+.arcade-privacy-card ul { padding-left: 20px; }
+.arcade-privacy-card b { color: var(--arcade-gold); }
+.arcade-privacy-back { margin-top: 18px !important; text-align: center; }
+
+/* ---------- 減少動態 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .arcade-stamp.is-ready, .arcade-stamp.is-just .arcade-stamp-ink { animation: none !important; }
+  .arcade-streak .arcade-machine { animation: none !important; }
+}
+.arcade-root.is-reduced .arcade-stamp.is-ready,
+.arcade-root.is-reduced .arcade-stamp.is-just .arcade-stamp-ink { animation: none !important; }

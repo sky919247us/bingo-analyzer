@@ -1,0 +1,156 @@
+/* 賓果娛樂機 — 中獎跑馬燈＋大獎 toast（沿用 arcade.css 的 --arcade-* 色票） */
+
+.arcade-ticker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0 0 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--arcade-line);
+  border-radius: 10px;
+  background: linear-gradient(90deg, rgba(34, 229, 255, 0.08), rgba(255, 63, 180, 0.08)), var(--arcade-panel);
+  font-size: 0.88rem;
+  line-height: 1.4;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+}
+.arcade-ticker-tag {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--arcade-bg);
+  background: var(--arcade-cyan);
+}
+.arcade-ticker-viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+}
+.arcade-ticker-track {
+  display: inline-flex;
+  width: max-content;
+  animation: arcade-ticker-scroll 30s linear infinite;
+  will-change: transform;
+}
+.arcade-ticker.is-paused .arcade-ticker-track,
+.arcade-ticker:hover .arcade-ticker-track { animation-play-state: paused; }
+.arcade-ticker-copy { display: inline-flex; flex: none; }
+.arcade-ticker-item {
+  flex: none;
+  padding: 0 28px 0 0;
+  color: var(--arcade-text);
+  font-variant-numeric: tabular-nums;
+}
+.arcade-ticker-item::after {
+  content: '◆';
+  margin-left: 28px;
+  color: var(--arcade-muted);
+  font-size: 0.6rem;
+  vertical-align: middle;
+}
+.arcade-ticker-item--topic,
+.arcade-ticker-item--countdown { color: var(--arcade-muted); }
+.arcade-ticker-item--self { color: var(--arcade-gold-2); }
+.arcade-ticker-item--win { color: var(--arcade-text); font-weight: 600; }
+.arcade-ticker-item--bigwin {
+  color: var(--arcade-gold);
+  font-weight: 800;
+  text-shadow: 0 0 8px rgba(255, 213, 74, 0.55);
+}
+
+@keyframes arcade-ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* 淡入淡出模式（reduced-motion）：不捲動，單則顯示、過長截斷 */
+.arcade-ticker.is-fade .arcade-ticker-viewport { -webkit-mask-image: none; mask-image: none; }
+.arcade-ticker.is-fade .arcade-ticker-item {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.arcade-ticker.is-fade .arcade-ticker-item::after { content: none; }
+.arcade-ticker-fadein { animation: arcade-ticker-fade 4s ease-in-out both; }
+.arcade-ticker.is-paused .arcade-ticker-fadein { animation-play-state: paused; }
+@keyframes arcade-ticker-fade {
+  0% { opacity: 0; }
+  12%, 88% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* 保險：即使 JS 沒切到淡入淡出，也不捲動 */
+@media (prefers-reduced-motion: reduce) {
+  .arcade-ticker-track { animation: none; }
+}
+.arcade-root.is-reduced .arcade-ticker-track { animation: none; }
+
+/* ───────────── 大獎 toast：右下；手機頂部；不擋操作 ───────────── */
+.arcade-toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 213, 74, 0.7);
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2a1d05, var(--arcade-panel-2));
+  color: var(--arcade-text);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 0 18px rgba(255, 213, 74, 0.35);
+  font-size: 0.88rem;
+  animation: arcade-toast-in 0.25s ease-out;
+}
+.arcade-toast-title {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--arcade-gold);
+  color: #2a1d05;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+.arcade-toast-text { flex: 1 1 auto; min-width: 0; color: var(--arcade-gold); font-weight: 700; overflow-wrap: anywhere; }
+.arcade-toast-close {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--arcade-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.arcade-toast-close:hover { color: var(--arcade-text); }
+@keyframes arcade-toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@media (max-width: 640px) {
+  .arcade-toast {
+    top: 12px;
+    bottom: auto;
+    left: 16px;
+    right: 16px;
+    max-width: none;
+  }
+  .arcade-ticker { font-size: 0.82rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arcade-toast { animation: none; }
+}
+.arcade-root.is-reduced .arcade-toast { animation: none; }

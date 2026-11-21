@@ -1,0 +1,295 @@
+/* ==========================================================
+ * 賓果娛樂機 — 機台、液晶與演出動畫
+ * ========================================================== */
+
+/* ---------- 預告色 → 強調色 ---------- */
+.arcade-machine[data-color='blue'], .arcade-lcd[data-color='blue'] { --arcade-accent: #3d7bff; }
+.arcade-machine[data-color='green'], .arcade-lcd[data-color='green'] { --arcade-accent: #3dff9a; }
+.arcade-machine[data-color='red'], .arcade-lcd[data-color='red'] { --arcade-accent: #ff3b4f; }
+.arcade-machine[data-color='gold'], .arcade-lcd[data-color='gold'] { --arcade-accent: #ffd54a; }
+.arcade-machine[data-color='rainbow'], .arcade-lcd[data-color='rainbow'] { --arcade-accent: #ff6bf1; }
+
+/* ---------- 機台 ---------- */
+.arcade-machine {
+  position: relative;
+  border-radius: 22px;
+  padding: 10px;
+  border: 3px solid transparent;
+  background:
+    linear-gradient(180deg, #16122c, #0b0918) padding-box,
+    linear-gradient(90deg, var(--arcade-cyan), var(--arcade-pink), var(--arcade-accent), var(--arcade-cyan)) border-box;
+  background-size: 100% 100%, 300% 100%;
+  animation: arcade-border-flow 6s linear infinite;
+  box-shadow: 0 0 22px rgba(34, 229, 255, 0.35), 0 0 46px rgba(255, 63, 180, 0.2);
+}
+.arcade-machine-glow {
+  position: absolute; inset: -2px; border-radius: 22px; pointer-events: none;
+  box-shadow: 0 0 40px var(--arcade-accent);
+  opacity: 0.25; transition: box-shadow 0.6s, opacity 0.6s;
+}
+.arcade-machine--drawing .arcade-machine-glow { opacity: 0.5; }
+@keyframes arcade-border-flow {
+  from { background-position: 0 0, 0% 0; }
+  to { background-position: 0 0, 300% 0; }
+}
+
+.arcade-marquee {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+  padding: 8px 12px 10px;
+}
+.arcade-marquee-lights {
+  position: absolute; left: 12px; right: 12px; top: 0; height: 4px; border-radius: 2px;
+  background: repeating-linear-gradient(90deg, var(--arcade-gold) 0 8px, transparent 8px 16px);
+  animation: arcade-lights 1s steps(2) infinite; opacity: 0.8;
+}
+@keyframes arcade-lights { 50% { opacity: 0.25; } }
+.arcade-logo {
+  font-size: clamp(1.3rem, 4vw, 2rem); font-weight: 900; letter-spacing: 0.08em; font-style: italic;
+  background: linear-gradient(180deg, #fff6c2, var(--arcade-gold) 50%, var(--arcade-gold-2));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 8px rgba(255, 213, 74, 0.55));
+}
+.arcade-logo span { color: var(--arcade-pink); -webkit-text-fill-color: var(--arcade-pink); margin: 0 2px; }
+.arcade-marquee-status { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; min-width: 0; }
+.arcade-status-text { color: var(--arcade-muted); font-variant-numeric: tabular-nums; }
+.arcade-phase { padding: 3px 10px; border-radius: 999px; font-weight: 800; white-space: nowrap; border: 1px solid currentColor; }
+.arcade-phase--betting { color: var(--arcade-green); }
+.arcade-phase--closed { color: var(--arcade-gold-2); }
+.arcade-phase--preview, .arcade-phase--drawing { color: var(--arcade-pink); animation: arcade-blink 0.9s infinite; }
+.arcade-phase--settle { color: var(--arcade-gold); }
+@keyframes arcade-blink { 50% { opacity: 0.45; } }
+
+.arcade-screen { position: relative; }
+.arcade-controls { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; padding: 10px 2px 2px; align-items: center; }
+.arcade-btn-label { font-size: 0.78rem; }
+
+/* PUSH 按鈕 */
+.arcade-push {
+  min-height: 64px; border-radius: 999px; border: 3px solid #fff; cursor: pointer;
+  background: radial-gradient(circle at 50% 30%, #ff8fd6, var(--arcade-pink) 55%, #a1006a);
+  color: #fff; font-weight: 900; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  box-shadow: 0 0 24px var(--arcade-pink), 0 0 60px rgba(255, 63, 180, 0.5);
+  animation: arcade-push-pulse 0.6s ease-in-out infinite alternate;
+}
+.arcade-push span { font-size: 1.6rem; letter-spacing: 0.15em; line-height: 1; }
+.arcade-push small { font-size: 0.7rem; font-weight: 600; }
+@keyframes arcade-push-pulse { to { transform: scale(1.06); box-shadow: 0 0 36px var(--arcade-pink), 0 0 90px rgba(255, 63, 180, 0.7); } }
+
+/* ---------- 液晶 ---------- */
+.arcade-lcd {
+  position: relative; overflow: hidden; border-radius: 14px; padding: 10px;
+  background:
+    radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--arcade-accent) 18%, transparent), transparent 70%),
+    linear-gradient(180deg, #050816, #0a0f24);
+  border: 2px solid rgba(34, 229, 255, 0.35);
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8), 0 0 14px rgba(34, 229, 255, 0.25);
+  transition: background 0.6s;
+}
+.arcade-lcd[data-color='rainbow'] { animation: arcade-hue 3s linear infinite; }
+@keyframes arcade-hue { to { filter: hue-rotate(360deg); } }
+.arcade-lcd-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.8rem; margin-bottom: 8px; flex-wrap: wrap; }
+.arcade-lcd-period { font-weight: 800; color: var(--arcade-cyan); }
+.arcade-lcd-count b, .arcade-lcd-hits b { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.arcade-lcd-hits b { color: var(--arcade-gold); display: inline-block; }
+.arcade-bump { animation: arcade-bump 0.4s ease-out; }
+@keyframes arcade-bump { 40% { transform: scale(1.8); color: #fff; } }
+
+.arcade-grid { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+.arcade-cell {
+  position: relative; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center;
+  border-radius: 8px; font-size: clamp(0.62rem, 1.6vw, 0.95rem); font-weight: 800; font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.35); background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background 0.25s, color 0.25s;
+}
+.arcade-cell.is-picked { border-color: var(--arcade-gold); color: var(--arcade-gold); box-shadow: inset 0 0 0 1px rgba(255, 213, 74, 0.5); }
+.arcade-cell.is-drawn { color: #fff; }
+.arcade-cell.tone-red { background: radial-gradient(circle at 35% 30%, #ff9a9a, #e3263a); }
+.arcade-cell.tone-yellow { background: radial-gradient(circle at 35% 30%, #fff3a1, #e2a800); color: #2a1a00; }
+.arcade-cell.tone-blue { background: radial-gradient(circle at 35% 30%, #9cc6ff, #2a5fe0); }
+.arcade-cell.tone-green { background: radial-gradient(circle at 35% 30%, #a3ffcd, #11a35a); color: #002a13; }
+.arcade-cell.is-new { animation: arcade-pop 0.5s 0.55s both; }
+.arcade-cell.is-hit { box-shadow: 0 0 0 2px #fff, 0 0 16px 4px var(--arcade-gold); z-index: 1; }
+.arcade-cell.is-hit.is-new::after {
+  content: ''; position: absolute; inset: -10px; border-radius: 50%;
+  border: 3px solid var(--arcade-gold); animation: arcade-ring 0.7s 0.6s ease-out both;
+}
+.arcade-cell.is-super { outline: 3px solid var(--arcade-pink); outline-offset: 1px; }
+@keyframes arcade-pop { 0% { transform: scale(0.4); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@keyframes arcade-ring { from { transform: scale(0.5); opacity: 1; } to { transform: scale(1.8); opacity: 0; } }
+
+/* 彩球 */
+.arcade-ball {
+  display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;
+  font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  box-shadow: inset -4px -6px 10px rgba(0, 0, 0, 0.35), inset 4px 4px 8px rgba(255, 255, 255, 0.45);
+}
+.arcade-ball--sm { width: 26px; height: 26px; font-size: 0.75rem; vertical-align: middle; }
+.arcade-ball--md { width: 44px; height: 44px; font-size: 1.1rem; }
+.arcade-ball--lg { width: clamp(84px, 20vw, 132px); height: clamp(84px, 20vw, 132px); font-size: clamp(2rem, 6vw, 3.4rem); }
+.arcade-ball--red { background: radial-gradient(circle at 35% 30%, #ffb3b3, #e3263a 60%, #8c0716); }
+.arcade-ball--yellow { background: radial-gradient(circle at 35% 30%, #fff8c4, #f1b500 60%, #8f6400); }
+.arcade-ball--blue { background: radial-gradient(circle at 35% 30%, #c2dcff, #2a5fe0 60%, #0d2a7a); }
+.arcade-ball--green { background: radial-gradient(circle at 35% 30%, #c6ffe0, #11a35a 60%, #04552c); }
+.arcade-ball--mystery { background: radial-gradient(circle at 35% 30%, #fff, #8a7cff 60%, #2b1a7a); animation: arcade-shake 0.15s infinite; }
+@keyframes arcade-shake { 50% { transform: translateX(3px) rotate(4deg); } }
+
+.arcade-ball-fly {
+  position: absolute; left: 50%; top: 45%; z-index: 5; pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: arcade-fly 0.85s cubic-bezier(0.3, 0.7, 0.4, 1) forwards;
+}
+.arcade-ball-fly.is-slow { animation-duration: 2.2s; }
+.arcade-ball-fly .arcade-ball { box-shadow: 0 0 30px var(--arcade-accent), inset -6px -8px 14px rgba(0, 0, 0, 0.35), inset 6px 6px 12px rgba(255, 255, 255, 0.5); }
+.arcade-ball-fly.is-hit .arcade-ball { box-shadow: 0 0 40px 10px var(--arcade-gold), inset -6px -8px 14px rgba(0, 0, 0, 0.35); }
+@keyframes arcade-fly {
+  0% { transform: translate(-50%, -320%) scale(0.5) rotate(-220deg); opacity: 0; }
+  22% { transform: translate(-50%, -50%) scale(1.15) rotate(0deg); opacity: 1; }
+  30% { transform: translate(-50%, -50%) scale(1); }
+  62% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--tx, 0px)), calc(-50% + var(--ty, 0px))) scale(0.3); opacity: 0.2; }
+}
+.arcade-hit-burst {
+  position: absolute; left: 50%; top: -18px; transform: translateX(-50%);
+  font-weight: 900; font-size: 1.4rem; color: var(--arcade-gold); text-shadow: 0 0 10px #ff9f1c, 0 0 2px #000;
+  animation: arcade-burst 0.6s ease-out both;
+}
+@keyframes arcade-burst { from { transform: translateX(-50%) scale(0.3); opacity: 0; } 50% { transform: translateX(-50%) scale(1.3); opacity: 1; } }
+
+/* ---------- 預告 ---------- */
+.arcade-strip { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; z-index: 3; }
+.arcade-colorbar--blue { background: linear-gradient(90deg, #1b3cff, #3d7bff); }
+.arcade-colorbar--green { background: linear-gradient(90deg, #0fbf6a, #3dff9a); }
+.arcade-colorbar--red { background: linear-gradient(90deg, #c4001a, #ff3b4f); }
+.arcade-colorbar--gold { background: linear-gradient(90deg, #ff9f1c, #ffe27a, #ff9f1c); }
+.arcade-colorbar--rainbow { background: linear-gradient(90deg, #ff3b4f, #ff9f1c, #ffe27a, #3dff9a, #22e5ff, #7a5cff, #ff3fb4); background-size: 200% 100%; animation: arcade-rainbow 1s linear infinite; }
+@keyframes arcade-rainbow { to { background-position: 200% 0; } }
+
+.arcade-preview {
+  position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  background: rgba(3, 3, 12, 0.78); padding: 12px;
+}
+.arcade-preview-flash { position: absolute; inset: 0; background: radial-gradient(circle, rgba(255, 255, 255, 0.5), transparent 60%); animation: arcade-flash 0.5s ease-out forwards; pointer-events: none; }
+@keyframes arcade-flash { from { opacity: 1; } to { opacity: 0; } }
+.arcade-preview-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; width: min(520px, 100%); }
+.arcade-step {
+  text-align: center; padding: 10px 2px; border-radius: 8px; font-weight: 900; font-size: clamp(0.62rem, 2vw, 0.9rem);
+  border: 1px solid rgba(255, 255, 255, 0.15); color: rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.04);
+  transform: skewX(-10deg);
+}
+.arcade-step.is-on { color: #2a1600; background: linear-gradient(180deg, #fff1a8, var(--arcade-gold), var(--arcade-gold-2)); box-shadow: 0 0 16px rgba(255, 213, 74, 0.7); animation: arcade-pop 0.35s; }
+.arcade-step.is-on:nth-child(4) { background: linear-gradient(180deg, #ffb3c0, #ff3b4f); color: #fff; }
+.arcade-step.is-on:nth-child(5) { background: linear-gradient(90deg, #ff3b4f, #ffe27a, #3dff9a, #22e5ff, #ff3fb4); color: #fff; }
+.arcade-preview-word {
+  font-size: clamp(2rem, 9vw, 4rem); font-weight: 900; font-style: italic; letter-spacing: 0.1em;
+  color: #fff; text-shadow: 0 0 12px var(--arcade-pink), 0 0 30px var(--arcade-pink); animation: arcade-zoom-in 0.45s both;
+}
+@keyframes arcade-zoom-in { from { transform: scale(2.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.arcade-colorbar { padding: 8px 24px; border-radius: 999px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px #000; animation: arcade-zoom-in 0.4s both; }
+.arcade-preview-note { font-size: 0.8rem; color: var(--arcade-muted); }
+
+/* ---------- 聽牌 ---------- */
+.arcade-lcd.is-reach { border-color: var(--arcade-red); }
+.arcade-reach { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.arcade-reach-vignette {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.85) 100%);
+  animation: arcade-heart 0.82s ease-in-out infinite;
+}
+@keyframes arcade-heart { 0%, 100% { opacity: 0.75; } 15% { opacity: 1; } 30% { opacity: 0.8; } 45% { opacity: 1; } }
+.arcade-reach-text { position: absolute; left: 0; right: 0; top: 6%; text-align: center; }
+.arcade-reach-title {
+  font-size: clamp(1.8rem, 8vw, 3.6rem); font-weight: 900; font-style: italic; letter-spacing: 0.06em; color: #fff;
+  text-shadow: 0 0 10px var(--arcade-cyan), 0 0 28px var(--arcade-cyan); animation: arcade-zoom-in 0.5s both;
+}
+.arcade-reach--sp .arcade-reach-title { text-shadow: 0 0 10px #3dff9a, 0 0 28px #3dff9a; }
+.arcade-reach--spsp .arcade-reach-title { text-shadow: 0 0 10px #ff3b4f, 0 0 32px #ff3b4f; }
+.arcade-reach--premium .arcade-reach-title {
+  background: linear-gradient(90deg, #ff3b4f, #ffe27a, #3dff9a, #22e5ff, #ff3fb4); background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.6)); animation: arcade-zoom-in 0.5s both, arcade-rainbow 1s linear infinite;
+}
+.arcade-reach-sub { font-size: 0.85rem; font-weight: 700; color: var(--arcade-gold); text-shadow: 0 1px 3px #000; }
+.arcade-reach-result { font-size: clamp(1.6rem, 7vw, 3rem); font-weight: 900; margin-top: 4px; animation: arcade-zoom-in 0.4s both; }
+.arcade-reach-result.is-win { color: var(--arcade-gold); text-shadow: 0 0 20px #ff9f1c; }
+.arcade-reach-result.is-lose { color: #9aa0c0; }
+
+/* ---------- 超級獎號 cut-in ---------- */
+.arcade-cutin {
+  position: fixed; inset: 0; z-index: 1200; display: flex; align-items: center; justify-content: center;
+  background: rgba(2, 2, 10, 0.72); pointer-events: none;
+}
+.arcade-cutin-band {
+  position: absolute; left: -10%; right: -10%; top: 50%; height: 210px; margin-top: -105px;
+  background: linear-gradient(90deg, transparent, rgba(255, 63, 180, 0.85), rgba(34, 229, 255, 0.85), transparent);
+  transform: skewY(-8deg); animation: arcade-band 0.45s ease-out both;
+}
+.arcade-cutin.is-premium .arcade-cutin-band { background: linear-gradient(90deg, #ff3b4f, #ff9f1c, #ffe27a, #3dff9a, #22e5ff, #7a5cff, #ff3fb4); background-size: 200% 100%; animation: arcade-band 0.45s ease-out both, arcade-rainbow 0.8s linear infinite; }
+@keyframes arcade-band { from { transform: skewY(-8deg) translateX(-110%); } to { transform: skewY(-8deg) translateX(0); } }
+.arcade-cutin-body { position: relative; text-align: center; display: grid; gap: 8px; justify-items: center; }
+.arcade-cutin-title { font-size: clamp(1.6rem, 7vw, 3rem); font-weight: 900; font-style: italic; color: #fff; letter-spacing: 0.12em; text-shadow: 0 0 16px #000, 0 0 24px var(--arcade-pink); }
+.arcade-ball--hero { animation: arcade-hero 0.6s cubic-bezier(0.2, 1.6, 0.4, 1) both; box-shadow: 0 0 60px 16px rgba(255, 255, 255, 0.6); }
+@keyframes arcade-hero { from { transform: scale(0.2) rotate(-360deg); } to { transform: scale(1.25) rotate(0); } }
+.arcade-cutin-sub { font-weight: 900; font-size: 1.2rem; color: var(--arcade-gold); text-shadow: 0 0 10px #000; }
+
+/* ---------- 結算 ---------- */
+.arcade-settle {
+  position: absolute; inset: 0; z-index: 7; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px; background: rgba(4, 3, 14, 0.82); text-align: center; overflow-y: auto;
+  animation: arcade-flash-in 0.3s both;
+}
+@keyframes arcade-flash-in { from { opacity: 0; } to { opacity: 1; } }
+.arcade-settle-title {
+  font-size: clamp(2rem, 9vw, 4.4rem); font-weight: 900; font-style: italic; letter-spacing: 0.06em;
+  background: linear-gradient(180deg, #fff6c2, var(--arcade-gold) 50%, var(--arcade-gold-2));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 14px rgba(255, 159, 28, 0.7)); animation: arcade-zoom-in 0.5s both;
+}
+.arcade-settle--big .arcade-settle-title, .arcade-settle--mega .arcade-settle-title { font-size: clamp(2.6rem, 12vw, 5.6rem); animation: arcade-zoom-in 0.5s both, arcade-wobble 0.9s 0.5s ease-in-out infinite alternate; }
+@keyframes arcade-wobble { to { transform: scale(1.08) rotate(-2deg); } }
+.arcade-settle-title--miss { font-size: clamp(1.3rem, 5vw, 2.2rem); background: linear-gradient(180deg, #e6e2ff, #8f88c2); -webkit-background-clip: text; background-clip: text; filter: none; }
+.arcade-settle-amount { font-size: clamp(2rem, 8vw, 3.6rem); font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; text-shadow: 0 0 18px var(--arcade-gold); }
+.arcade-settle-sub { font-size: 0.85rem; color: var(--arcade-muted); }
+.arcade-settle-lines { list-style: none; padding: 0; margin: 0; width: min(360px, 100%); font-size: 0.8rem; display: grid; gap: 3px; max-height: 30%; overflow-y: auto; }
+.arcade-settle-lines li { display: flex; justify-content: space-between; padding: 3px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); }
+.arcade-settle-lines li.is-win { color: var(--arcade-gold); }
+.arcade-settle-facts { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; align-items: center; font-size: 0.85rem; }
+.arcade-settle-facts b { color: var(--arcade-cyan); }
+.arcade-settle-note { font-size: 0.75rem; color: var(--arcade-cyan); }
+.arcade-bigflash { position: fixed; inset: 0; z-index: 1240; pointer-events: none; background: #fff; animation: arcade-bigflash 1.2s ease-out both; }
+@keyframes arcade-bigflash { 0% { opacity: 0.95; } 15% { opacity: 0; } 30% { opacity: 0.7; } 50% { opacity: 0; } 65% { opacity: 0.4; } 100% { opacity: 0; } }
+.arcade-coinrain { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 1250; pointer-events: none; }
+
+/* ---------- 拔河量表 ---------- */
+.arcade-tugs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px 4px 0; }
+.arcade-tug { position: relative; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 800; }
+.arcade-tug-side { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--arcade-muted); }
+.arcade-tug-side.is-win { color: var(--arcade-gold); text-shadow: 0 0 8px var(--arcade-gold-2); }
+.arcade-tug-track { position: relative; height: 12px; border-radius: 6px; background: linear-gradient(90deg, rgba(34, 229, 255, 0.25), rgba(255, 63, 180, 0.25)); overflow: visible; }
+.arcade-tug-fill-l { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: linear-gradient(90deg, var(--arcade-cyan), rgba(34, 229, 255, 0.4)); transition: width 0.4s cubic-bezier(0.3, 1.5, 0.5, 1); }
+.arcade-tug-mark { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: rgba(255, 255, 255, 0.5); }
+.arcade-tug-knot { position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: #fff; box-shadow: 0 0 10px #fff; transition: left 0.4s cubic-bezier(0.3, 1.5, 0.5, 1); }
+.arcade-tug.is-locked .arcade-tug-knot { background: var(--arcade-gold); box-shadow: 0 0 14px var(--arcade-gold); }
+.arcade-tug-result {
+  position: absolute; left: 50%; top: -14px; transform: translateX(-50%); padding: 0 8px; border-radius: 6px;
+  background: var(--arcade-gold); color: #2a1600; font-size: 0.75rem; animation: arcade-pop 0.4s both;
+}
+
+/* ---------- 減少動態 ---------- */
+.arcade-root.is-reduced *, .arcade-root.is-reduced *::before, .arcade-root.is-reduced *::after {
+  animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important;
+}
+.arcade-root.is-reduced .arcade-ball-fly, .arcade-root.is-reduced .arcade-preview-flash { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .arcade-machine, .arcade-marquee-lights, .arcade-push, .arcade-lcd[data-color='rainbow'] { animation: none !important; }
+}
+
+@media (max-width: 768px) {
+  .arcade-machine { padding: 6px; border-radius: 16px; }
+  .arcade-lcd { padding: 6px; }
+  .arcade-grid { gap: 3px; }
+  .arcade-cell { border-radius: 6px; }
+  .arcade-tugs { grid-template-columns: 1fr; gap: 16px; padding-top: 14px; }
+  .arcade-controls { grid-template-columns: auto 1fr auto; }
+  .arcade-btn-label { display: none; }
+  .arcade-cutin-band { height: 160px; margin-top: -80px; }
+}

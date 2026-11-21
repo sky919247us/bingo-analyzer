@@ -1,4 +1,8 @@
-export interface Env {
+import { handleArcade, isArcadePath } from './arcade/router';
+import { settleFromKv } from './arcade/settle';
+import type { ArcadeEnv } from './arcade/types';
+
+export interface Env extends ArcadeEnv {
   BINGO_KV: KVNamespace;
 }
 
@@ -166,6 +170,8 @@ async function writeToday(env: Env, draws: any[]): Promise<void> {
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    // 賓果娛樂機新端點（/api/* 但不含 /api/kv/*）：CORS 白名單，含 OPTIONS 預檢
+    if (isArcadePath(url.pathname)) return handleArcade(request, env);
     if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
     try {
@@ -200,6 +206,9 @@ export default {
       ctx.waitUntil(
           new Promise(resolve => setTimeout(resolve, 3_000))
               .then(() => syncDrawsToKV(env))
+              // 同步完成後結算娛樂機注單；失敗只記 log，不影響既有 KV 同步
+              .then(() => settleFromKv(env))
+              .catch(err => console.error('[arcade] 排程結算失敗:', err))
       );
   },
 };

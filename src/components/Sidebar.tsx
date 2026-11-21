@@ -26,6 +26,7 @@ const BINGO_NAV = [
     { to: '/bingo-statistics', label: '統計分析', icon: '📈', end: false },
     { to: '/bingo-combos', label: '組合分析', icon: '🧩', end: false },
     { to: '/bingo-guide', label: '玩法教學', icon: '📖', end: false },
+    { to: '/bingo-arcade', label: '賓果娛樂機', icon: '🎰', end: false },
     { to: '/dashboard-large', label: '大螢幕模式', icon: '🖥️', end: false },
 ];
 

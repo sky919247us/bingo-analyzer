@@ -13,3 +13,10 @@ id = "70a64942296646beb26ecd8aea27597c"
 # 2. 換日排程：台灣凌晨 04:05 = UTC 20:05，清空前日資料
 [triggers]
 crons = ["*/5 0-15,23 * * *", "5 20 * * *"]
+
+# 賓果娛樂機 D1（部署前先 `npx wrangler d1 create bingo-arcade`，把回傳的 database_id 填入；見 ARCADE_SETUP.md）
+[[d1_databases]]
+binding = "ARCADE_DB"
+database_name = "bingo-arcade"
+database_id = "0cfebfa1-34a0-4217-8083-f393f7cbb747"
+migrations_dir = "migrations"

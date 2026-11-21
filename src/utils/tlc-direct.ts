@@ -43,6 +43,8 @@ export interface TlcDraw {
     drawTime: string;
     numbers: number[];
     superNumber: number;
+    /** 實際開出順序（API 的 openShowOrder；缺漏時為 undefined） */
+    openOrder?: number[];
 }
 
 /** 取得指定時刻的台北時間欄位 */
@@ -137,6 +139,9 @@ function toDraw(item: Record<string, unknown>, fallbackDate: string): TlcDraw {
         drawTime: fallbackDate,
         numbers: (item.bigShowOrder as string[]).map((n) => parseInt(n, 10)),
         superNumber: parseInt((item.bullEyeTop as string) || '0', 10),
+        openOrder: Array.isArray(item.openShowOrder)
+            ? (item.openShowOrder as string[]).map((n) => parseInt(n, 10))
+            : undefined,
     };
 }
 

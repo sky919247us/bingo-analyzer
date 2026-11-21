@@ -18,6 +18,8 @@ export interface BingoDrawData {
   numbers: number[];
   /** 超級獎號 */
   superNumber: number;
+  /** 實際開出順序（選填，僅即時直連資料有） */
+  openOrder?: number[];
 }
 
 /**
